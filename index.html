@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sleek Banana Peeler</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sleek Banana Peeler Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -34,6 +34,14 @@
 
         <div class="leaderboard">
             <h3>Top Peelers</h3>
+            <button id="clear-scores-btn" 
+                    onmousedown="startHoldCount()" 
+                    onmouseup="cancelHoldCount()" 
+                    onmouseleave="cancelHoldCount()"
+                    ontouchstart="startHoldCount()" 
+                    ontouchend="cancelHoldCount()">
+                    Hold 3s to Reset Scores
+            </button>
             <ol id="score-list">
                 <li>No scores yet!</li>
             </ol>
