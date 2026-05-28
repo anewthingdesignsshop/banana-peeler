@@ -45,11 +45,9 @@ function spawnPeelElement() {
     else if (randomDir === 'right') peel.classList.add('right-peel');
     else peel.classList.add('front-peel');
 
-    // Layer 1: The unpeeled static body that shaves downwards
     const staticBase = document.createElement('div');
     staticBase.classList.add('static-base');
 
-    // Layer 2: The active moving flap that turns inside out
     const rollingFlap = document.createElement('div');
     rollingFlap.classList.add('rolling-flap');
 
@@ -108,29 +106,30 @@ function drag(e) {
     const base = activePeel.querySelector('.static-base');
     const flap = activePeel.querySelector('.rolling-flap');
 
-    const pct = progress * 100;
+    // FIX: Single-matrix scaling compression mimics rolling inside out 
+    // without flattening the curves into a straight line sliver!
+    const liveScaleY = 1 - (progress * 0.9); 
+    const rollAngle = progress * 140; 
 
     if (base && flap) {
-        // The unpeeled yellow base gets shaved down from the top
-        base.style.clipPath = `polygon(0% ${pct}%, 100% ${pct}%, 100% 100%, 0% 100%)`;
-
-        // The rolling flap forms the loop, scaling down to meet the baseline cleanly
         if (direction === 'down') {
-            flap.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${pct}%, 0% ${pct}%)`;
-            flap.style.transform = `rotateY(180deg) rotateX(${progress * 140}deg) scaleY(${1 - progress * 0.3})`;
+            // Roll forward
+            base.style.transform = `rotateX(${rollAngle}deg) scaleY(${liveScaleY})`;
+            flap.style.transform = `rotateY(180deg) rotateX(${rollAngle}deg) scaleY(${liveScaleY})`;
         } else {
-            flap.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${pct}%, 0% ${pct}%)`;
-            flap.style.transform = `rotateY(180deg) rotateX(${progress * -140}deg) scaleY(${1 - progress * 0.3})`;
+            // Roll backward
+            base.style.transform = `rotateX(${-rollAngle}deg) scaleY(${liveScaleY})`;
+            flap.style.transform = `rotateY(180deg) rotateX(${-rollAngle}deg) scaleY(${liveScaleY})`;
         }
     }
 
-    // Gentle global structural sway
+    // Horizontal structural sway tracking
     if (direction === 'left' && deltaX < 0) {
-        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.1)}deg) translateX(${deltaX * 0.2}px) translateY(${Math.abs(deltaX) * 0.1}px)`;
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.08)}deg) translateX(${deltaX * 0.15}px) translateY(${Math.abs(deltaX) * 0.1}px)`;
     } else if (direction === 'right' && deltaX > 0) {
-        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.1)}deg) translateX(${deltaX * 0.2}px) translateY(${deltaX * 0.1}px)`;
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.08)}deg) translateX(${deltaX * 0.15}px) translateY(${deltaX * 0.1}px)`;
     } else if (direction === 'down' && deltaY > 0) {
-        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.2}px)`;
+        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.15}px)`;
     }
 
     if (
@@ -156,19 +155,16 @@ function stopDrag(e) {
         const base = activePeel.querySelector('.static-base');
         const flap = activePeel.querySelector('.rolling-flap');
 
-        const snapTransition = "transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+        const snapTransition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
         activePeel.style.transition = snapTransition;
-        if (base) base.style.transition = snapTransition + ", clip-path 0.3s ease";
-        if (flap) flap.style.transition = snapTransition + ", clip-path 0.3s ease";
+        if (base) base.style.transition = snapTransition;
+        if (flap) flap.style.transition = snapTransition;
 
         const baseRot = activePeel.dataset.baseRotation;
         activePeel.style.transform = `rotate(${baseRot}deg)`;
         
-        if (base) base.style.clipPath = "none";
-        if (flap) {
-            flap.style.clipPath = "none";
-            flap.style.transform = "rotateY(180deg) rotateX(0deg) scaleY(1)";
-        }
+        if (base) base.style.transform = "rotateX(0deg) scaleY(1)";
+        if (flap) flap.style.transform = "rotateY(180deg) rotateX(0deg) scaleY(1)";
 
         const transientPeel = activePeel;
         setTimeout(() => {
@@ -179,7 +175,7 @@ function stopDrag(e) {
                 if (b) b.style.transition = "";
                 if (f) f.style.transition = "";
             }
-        }, 350);
+        }, 400);
     }
 
     activePeel = null;
