@@ -1,219 +1,213 @@
-let currentLevel = 1;
-const maxLevels = 20;
-
-let totalPeelsNeeded = 3; 
-let visiblePeelsCount = 0; 
-
-// Drag thresholds
-let activePeel = null;
-let startX = 0;
-let startY = 0;
-const PEEL_THRESHOLD = 75;
-
-// Boot lifecycle wrapper
-document.addEventListener("DOMContentLoaded", () => {
-    startLevel();
-});
-
-function startLevel() {
-    document.getElementById('level-display').innerText = `Level ${currentLevel}/${maxLevels}`;
-    document.getElementById('win-message').innerText = "";
-    document.getElementById('next-btn').style.display = 'none';
-    
-    // Level scaling calculation (Doubling values sequence)
-    totalPeelsNeeded = 3 * Math.pow(2, currentLevel - 1);
-    document.getElementById('peel-counter').innerText = `Peels Remaining: ${totalPeelsNeeded}`;
-
-    // Clear nodes
-    document.getElementById('peel-spawn-layer').innerHTML = "";
-    visiblePeelsCount = 0;
-
-    // Build stack (capped at 20 processing threads to bypass performance rendering throttling)
-    let peelsToRender = Math.min(totalPeelsNeeded, 20);
-    for (let i = 0; i < peelsToRender; i++) {
-        spawnPeelElement();
-    }
+body {
+    background-color: #fcedc0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    user-select: none;
 }
 
-function spawnPeelElement() {
-    visiblePeelsCount++;
-    const container = document.getElementById('peel-spawn-layer');
-    
-    const peel = document.createElement('div');
-    peel.classList.add('peel');
-    
-    const directions = ['left', 'right', 'down'];
-    const randomDir = directions[Math.floor(Math.random() * directions.length)];
-    peel.dataset.direction = randomDir;
-
-    if (randomDir === 'left') {
-        peel.classList.add('left-peel');
-    } else if (randomDir === 'right') {
-        peel.classList.add('right-peel');
-    } else {
-        peel.classList.add('front-peel');
-    }
-
-    const shapeInner = document.createElement('div');
-    shapeInner.classList.add('peel-shape');
-
-    let randomRotation = 0; 
-    
-    if (randomDir === 'left') {
-        shapeInner.style.borderRadius = "100% 0% 20% 50% / 60% 0% 10% 40%";
-        randomRotation = -4 - (Math.random() * 8); 
-    } else if (randomDir === 'right') {
-        shapeInner.style.borderRadius = "0% 100% 50% 20% / 0% 60% 40% 10%";
-        randomRotation = 4 + (Math.random() * 8); 
-    } else {
-        shapeInner.style.borderRadius = "50% 50% 30% 30% / 40% 40% 60% 60%";
-        shapeInner.style.background = "#f5d742"; 
-        randomRotation = (Math.random() * 6) - 3; 
-    }
-
-    peel.style.transform = `rotate(${randomRotation}deg)`;
-    peel.dataset.baseRotation = randomRotation; 
-
-    peel.appendChild(shapeInner);
-    container.appendChild(peel);
-
-    peel.addEventListener('pointerdown', startDrag);
+.game-container {
+    text-align: center;
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    width: 320px;
 }
 
-function startDrag(e) {
-    if (activePeel) return;
-    
-    activePeel = e.currentTarget;
-    activePeel.style.cursor = 'grabbing';
-    activePeel.style.zIndex = 100; 
-    activePeel.style.transition = ""; // Kill snap-back transitions during active tracking
-    activePeel.setPointerCapture(e.pointerId);
-
-    startX = e.clientX;
-    startY = e.clientY;
-
-    activePeel.addEventListener('pointermove', drag);
-    activePeel.addEventListener('pointerup', stopDrag);
+#level-display {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #e67e22;
+    margin-bottom: 5px;
 }
 
-function drag(e) {
-    if (!activePeel) return;
-
-    const currentX = e.clientX;
-    const currentY = e.clientY;
-    
-    const deltaX = currentX - startX;
-    const deltaY = currentY - startY;
-    const direction = activePeel.dataset.direction;
-    const baseRot = parseFloat(activePeel.dataset.baseRotation) || 0;
-
-    // Track input progression scalar (0.0 to 1.0)
-    let progress = 0;
-    if (direction === 'left') progress = Math.min(Math.abs(deltaX) / PEEL_THRESHOLD, 1);
-    if (direction === 'right') progress = Math.min(Math.abs(deltaX) / PEEL_THRESHOLD, 1);
-    if (direction === 'down') progress = Math.min(Math.max(0, deltaY) / PEEL_THRESHOLD, 1);
-
-    // Calculate real-time interactive geometric transformations
-    const liveRotateX = progress * -120; 
-    const liveScale = 1 - (progress * 0.3); 
-    const liveClipTop = progress * 100;
-
-    // Stream rendering values live to the DOM clip matrix
-    activePeel.style.clipPath = `polygon(0% ${liveClipTop}%, 100% ${liveClipTop}%, 100% 100%, 0% 100%)`;
-
-    if (direction === 'left' && deltaX < 0) {
-        activePeel.style.transform = `translate(${deltaX}px, ${Math.abs(deltaX) * 0.4}px) rotate(${baseRot + (deltaX * 0.2)}deg) rotateX(${liveRotateX}deg) scale(${liveScale})`;
-    } else if (direction === 'right' && deltaX > 0) {
-        activePeel.style.transform = `translate(${deltaX}px, ${deltaX * 0.4}px) rotate(${baseRot + (deltaX * 0.2)}deg) rotateX(${liveRotateX}deg) scale(${liveScale})`;
-    } else if (direction === 'down' && deltaY > 0) {
-        const frontRotateX = progress * 140;
-        activePeel.style.transform = `translateY(${deltaY}px) rotate(${baseRot}deg) rotateX(${frontRotateX}deg) scale(${liveScale})`;
-    }
-
-    // Evaluate success bounds threshold crossings
-    if (
-        (direction === 'left' && deltaX < -PEEL_THRESHOLD) ||
-        (direction === 'right' && deltaX > PEEL_THRESHOLD) ||
-        (direction === 'down' && deltaY > PEEL_THRESHOLD)
-    ) {
-        successfulPeel();
-    }
+#peel-counter {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #7f8c8d;
+    margin-bottom: 25px;
 }
 
-function stopDrag(e) {
-    if (!activePeel) return;
-
-    activePeel.releasePointerCapture(e.pointerId);
-    activePeel.removeEventListener('pointermove', drag);
-    activePeel.removeEventListener('pointerup', stopDrag);
-
-    if (activePeel && !activePeel.classList.contains('peeled-away')) {
-        activePeel.style.cursor = 'grab';
-        activePeel.style.zIndex = "";
-        
-        // Elastic rebound execution if let go early
-        activePeel.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), clip-path 0.3s ease";
-        const baseRot = activePeel.dataset.baseRotation;
-        activePeel.style.transform = `rotate(${baseRot}deg)`;
-        activePeel.style.clipPath = "none"; 
-        
-        const transientPeel = activePeel;
-        setTimeout(() => {
-            if (transientPeel && !transientPeel.classList.contains('peeled-away')) {
-                transientPeel.style.transition = "";
-            }
-        }, 300);
-    }
-
-    activePeel = null;
+/* Container holding the constructed banana */
+.banana-box {
+    position: relative;
+    width: 200px;
+    height: 250px;
+    margin: 0 auto 20px;
+    perspective: 800px; /* 3D depth field */
 }
 
-function successfulPeel() {
-    const peel = activePeel;
-    peel.classList.add('peeled-away');
-    
-    const direction = peel.dataset.direction;
-    const baseRot = parseFloat(peel.dataset.baseRotation) || 0;
-
-    // Final exaggerated explosive vector releases
-    if (direction === 'left') {
-        peel.style.transform = `translate(-200px, 250px) rotate(${baseRot - 90}deg) rotateX(-180deg) scale(0.05)`;
-    } else if (direction === 'right') {
-        peel.style.transform = `translate(200px, 250px) rotate(${baseRot + 90}deg) rotateX(-180deg) scale(0.05)`;
-    } else {
-        peel.style.transform = `translateY(300px) rotate(${baseRot}deg) rotateX(270deg) scale(0.05)`;
-    }
-
-    peel.style.clipPath = `polygon(50% 100%, 50% 100%, 100% 100%, 0% 100%)`;
-
-    totalPeelsNeeded--;
-    visiblePeelsCount--;
-    
-    document.getElementById('peel-counter').innerText = `Peels Remaining: ${totalPeelsNeeded}`;
-
-    if (totalPeelsNeeded >= 20 && visiblePeelsCount < 20) {
-        spawnPeelElement();
-    }
-
-    if (totalPeelsNeeded === 0) {
-        handleLevelWin();
-    }
-    
-    activePeel = null;
+/* --- THE INTERNAL FRUIT --- */
+.banana-core {
+    position: absolute;
+    width: 75px;
+    height: 175px;
+    bottom: 35px;
+    left: 62.5px;
+    z-index: 1;
 }
 
-function handleLevelWin() {
-    if (currentLevel === maxLevels) {
-        document.getElementById('win-message').innerText = "🎉 Unbelievable! You completed all 20 Levels! You are the Banana Master! 👑";
-    } else {
-        document.getElementById('win-message').innerText = "Level Complete! 🍌";
-        document.getElementById('next-btn').style.display = 'inline-block';
-    }
+.fruit-body {
+    width: 100%;
+    height: 100%;
+    background: #fffcd1;
+    border-radius: 50% 50% 30% 30% / 50% 50% 50% 50%;
+    border: 3px solid #f1eb9c;
+    position: relative;
+    box-shadow: inset -8px 0 15px rgba(241, 235, 156, 0.4);
 }
 
-function goToNextLevel() {
-    if (currentLevel < maxLevels) {
-        currentLevel++;
-        startLevel();
-    }
+.fruit-tip {
+    position: absolute;
+    bottom: -4px;
+    left: 31px;
+    width: 14px;
+    height: 8px;
+    background: #5c4033;
+    border-radius: 50%;
+}
+
+/* --- CHIBI FACE --- */
+.face {
+    position: absolute;
+    width: 100%;
+    top: 40px;
+    display: flex;
+    justify-content: center;
+    height: 40px;
+}
+
+.eye {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #2c3e50;
+    border-radius: 50%;
+    top: 5px;
+}
+.left-eye { left: 16px; }
+.right-eye { right: 16px; }
+
+.shine {
+    width: 3px;
+    height: 3px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+}
+
+.mouth {
+    position: absolute;
+    width: 12px;
+    height: 8px;
+    border-bottom: 3px solid #2c3e50;
+    border-radius: 0 0 10px 10px;
+    top: 14px;
+}
+
+.blush {
+    position: absolute;
+    width: 8px;
+    height: 5px;
+    background: #ff7675;
+    background: rgba(255, 118, 117, 0.6);
+    border-radius: 50%;
+    top: 13px;
+}
+.left-blush { left: 10px; }
+.right-blush { right: 10px; }
+
+
+/* --- SPAWN LAYER CONTAINER --- */
+#peel-spawn-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 10;
+}
+
+/* --- THE PEELS --- */
+.peel {
+    position: absolute;
+    width: 76px; /* Matched perfectly to the 75px core (+1px border bleed) */
+    height: 176px;
+    bottom: 34px;
+    transform-origin: bottom center; /* CRITICAL: Everything rolls down to this point */
+    touch-action: none;
+    cursor: grab;
+    display: block !important;
+    transform-style: preserve-3d; 
+}
+
+/* Outer Skin (Yellow) */
+.peel-shape {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #e5b60d 0%, #f1c40f 30%, #fcd63b 70%, #d4ac0d 100%) !important;
+    border: 2px solid #d4ac0d;
+    backface-visibility: hidden; 
+    z-index: 2;
+}
+
+/* Inner Skin (Cream White) */
+.peel-inner {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #eae5be 0%, #fffde6 50%, #eae5be 100%);
+    border: 2px solid #e2dcad;
+    transform: rotateY(180deg); 
+    backface-visibility: hidden;
+    z-index: 1;
+}
+
+/* CONFINED BASE COORDINATES:
+   All layers spawn directly on top of the 62.5px core center.
+   No more outward displacement!
+*/
+.left-peel { left: 62px; z-index: 14; }
+.right-peel { left: 63px; z-index: 13; }
+.front-peel { left: 62.5px; z-index: 15; }
+
+/* --- CLEAN MOTION SLICK FINISH --- */
+.peeled-away {
+    transition: transform 0.7s cubic-bezier(0.55, 0.055, 0.675, 0.19), opacity 0.4s ease-in !important;
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+#next-btn {
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 1.1rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
+    display: none;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+    transition: transform 0.1s;
+}
+#next-btn:active { transform: scale(0.95); }
+
+#win-message {
+    margin-top: 15px;
+    font-size: 1.3rem;
+    color: #27ae60;
+    font-weight: bold;
+}
+
+@media (max-width: 400px) {
+    .game-container { width: 90%; padding: 20px 15px; }
+    .banana-box { transform: scale(0.9); }
 }
