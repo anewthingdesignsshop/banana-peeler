@@ -32,13 +32,12 @@ body {
     margin-bottom: 25px;
 }
 
-/* Container holding the constructed banana */
 .banana-box {
     position: relative;
     width: 200px;
     height: 250px;
     margin: 0 auto 20px;
-    perspective: 1000px; /* High 3D space matrix */
+    perspective: 1000px;
 }
 
 /* --- THE INTERNAL FRUIT --- */
@@ -131,7 +130,7 @@ body {
     z-index: 10;
 }
 
-/* --- BACK TO SOLID BEAUTIFUL PEELS --- */
+/* --- THE MAIN CONTAINERS --- */
 .peel {
     position: absolute;
     width: 78px;
@@ -144,17 +143,17 @@ body {
     transform-style: preserve-3d;
 }
 
-/* The actual physical skins (Beautifully tapered curves restored!) */
+/* Base layouts for the layered skins */
 .peel-shape, .peel-inner {
     position: absolute;
     width: 100%;
     height: 100%;
-    border-radius: 50% 50% 30% 30% / 55% 55% 45% 45%; /* Smooth banana profile */
+    border-radius: 50% 50% 30% 30% / 55% 55% 45% 45%;
     box-sizing: border-box;
     transform-origin: bottom center;
 }
 
-/* Yellow Exterior */
+/* Yellow Exterior Layer */
 .peel-shape {
     background: linear-gradient(90deg, #e5b60d 0%, #f1c40f 30%, #fcd63b 70%, #d4ac0d 100%);
     border: 2px solid #d4ac0d;
@@ -162,23 +161,22 @@ body {
     z-index: 2;
 }
 
-/* Cream Interior Reveal */
+/* Cream Interior Layer */
 .peel-inner {
     background: linear-gradient(90deg, #eae5be 0%, #fffde6 50%, #eae5be 100%);
     border: 2px solid #e2dcad;
-    transform: rotateY(180deg); /* Hidden perfectly on the flipside */
+    transform: rotateY(180deg);
     backface-visibility: hidden;
     z-index: 1;
 }
 
-/* Stacking positions directly over the banana center */
 .left-peel { left: 61px; z-index: 14; }
 .right-peel { left: 64px; z-index: 13; }
 .front-peel { left: 62.5px; z-index: 15; }
 
-/* --- EXPLOSIVE CLEAN OUT-FLING --- */
+/* --- SEAMLESS DESTRUCTION Vector FLING --- */
 .peeled-away {
-    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-out !important;
+    transition: transform 0.6s ease-in, opacity 0.3s ease-out !important;
     opacity: 0 !important;
     pointer-events: none;
 }
