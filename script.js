@@ -10,7 +10,7 @@ let startX = 0;
 let startY = 0;
 const PEEL_THRESHOLD = 75;
 
-// Strict boot setup wrapper
+// Boot lifecycle wrapper
 document.addEventListener("DOMContentLoaded", () => {
     startLevel();
 });
@@ -20,15 +20,15 @@ function startLevel() {
     document.getElementById('win-message').innerText = "";
     document.getElementById('next-btn').style.display = 'none';
     
-    // Level scaling algorithm: Level 1 = 3, Level 2 = 6, Level 3 = 12, etc.
+    // Level scaling calculation (Doubling values sequence)
     totalPeelsNeeded = 3 * Math.pow(2, currentLevel - 1);
     document.getElementById('peel-counter').innerText = `Peels Remaining: ${totalPeelsNeeded}`;
 
-    // Clear structural canvas
+    // Clear nodes
     document.getElementById('peel-spawn-layer').innerHTML = "";
     visiblePeelsCount = 0;
 
-    // Build visual peel layers (Cap visible elements at 20 to avoid browser lag)
+    // Build stack (capped at 20 processing threads to bypass performance rendering throttling)
     let peelsToRender = Math.min(totalPeelsNeeded, 20);
     for (let i = 0; i < peelsToRender; i++) {
         spawnPeelElement();
@@ -42,12 +42,10 @@ function spawnPeelElement() {
     const peel = document.createElement('div');
     peel.classList.add('peel');
     
-    // Assign direction parameters
     const directions = ['left', 'right', 'down'];
     const randomDir = directions[Math.floor(Math.random() * directions.length)];
     peel.dataset.direction = randomDir;
 
-    // Bind JavaScript choice to CSS positioning coordinates
     if (randomDir === 'left') {
         peel.classList.add('left-peel');
     } else if (randomDir === 'right') {
@@ -59,21 +57,17 @@ function spawnPeelElement() {
     const shapeInner = document.createElement('div');
     shapeInner.classList.add('peel-shape');
 
-    // Smart directional rotations to prevent the layout from flaring out like a tulip
     let randomRotation = 0; 
     
     if (randomDir === 'left') {
         shapeInner.style.borderRadius = "100% 0% 20% 50% / 60% 0% 10% 40%";
-        // Left peels ONLY lean slightly left (-4 to -12 degrees)
         randomRotation = -4 - (Math.random() * 8); 
     } else if (randomDir === 'right') {
         shapeInner.style.borderRadius = "0% 100% 50% 20% / 0% 60% 40% 10%";
-        // Right peels ONLY lean slightly right (+4 to +12 degrees)
         randomRotation = 4 + (Math.random() * 8); 
     } else {
         shapeInner.style.borderRadius = "50% 50% 30% 30% / 40% 40% 60% 60%";
         shapeInner.style.background = "#f5d742"; 
-        // Center/front peels stay almost perfectly straight (-3 to +3 degrees)
         randomRotation = (Math.random() * 6) - 3; 
     }
 
@@ -83,7 +77,6 @@ function spawnPeelElement() {
     peel.appendChild(shapeInner);
     container.appendChild(peel);
 
-    // Attach interaction listeners
     peel.addEventListener('pointerdown', startDrag);
 }
 
@@ -93,6 +86,7 @@ function startDrag(e) {
     activePeel = e.currentTarget;
     activePeel.style.cursor = 'grabbing';
     activePeel.style.zIndex = 100; 
+    activePeel.style.transition = ""; // Kill snap-back transitions during active tracking
     activePeel.setPointerCapture(e.pointerId);
 
     startX = e.clientX;
@@ -111,16 +105,32 @@ function drag(e) {
     const deltaX = currentX - startX;
     const deltaY = currentY - startY;
     const direction = activePeel.dataset.direction;
-    const baseRot = parseFloat(activePeel.dataset.baseRotation);
+    const baseRot = parseFloat(activePeel.dataset.baseRotation) || 0;
+
+    // Track input progression scalar (0.0 to 1.0)
+    let progress = 0;
+    if (direction === 'left') progress = Math.min(Math.abs(deltaX) / PEEL_THRESHOLD, 1);
+    if (direction === 'right') progress = Math.min(Math.abs(deltaX) / PEEL_THRESHOLD, 1);
+    if (direction === 'down') progress = Math.min(Math.max(0, deltaY) / PEEL_THRESHOLD, 1);
+
+    // Calculate real-time interactive geometric transformations
+    const liveRotateX = progress * -120; 
+    const liveScale = 1 - (progress * 0.3); 
+    const liveClipTop = progress * 100;
+
+    // Stream rendering values live to the DOM clip matrix
+    activePeel.style.clipPath = `polygon(0% ${liveClipTop}%, 100% ${liveClipTop}%, 100% 100%, 0% 100%)`;
 
     if (direction === 'left' && deltaX < 0) {
-        activePeel.style.transform = `translate(${deltaX}px, ${Math.abs(deltaX)*0.5}px) rotate(${baseRot + deltaX*0.3}deg)`;
+        activePeel.style.transform = `translate(${deltaX}px, ${Math.abs(deltaX) * 0.4}px) rotate(${baseRot + (deltaX * 0.2)}deg) rotateX(${liveRotateX}deg) scale(${liveScale})`;
     } else if (direction === 'right' && deltaX > 0) {
-        activePeel.style.transform = `translate(${deltaX}px, ${deltaX*0.5}px) rotate(${baseRot + deltaX*0.3}deg)`;
+        activePeel.style.transform = `translate(${deltaX}px, ${deltaX * 0.4}px) rotate(${baseRot + (deltaX * 0.2)}deg) rotateX(${liveRotateX}deg) scale(${liveScale})`;
     } else if (direction === 'down' && deltaY > 0) {
-        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY}px) scaleY(${1 - deltaY*0.002})`;
+        const frontRotateX = progress * 140;
+        activePeel.style.transform = `translateY(${deltaY}px) rotate(${baseRot}deg) rotateX(${frontRotateX}deg) scale(${liveScale})`;
     }
 
+    // Evaluate success bounds threshold crossings
     if (
         (direction === 'left' && deltaX < -PEEL_THRESHOLD) ||
         (direction === 'right' && deltaX > PEEL_THRESHOLD) ||
@@ -140,8 +150,19 @@ function stopDrag(e) {
     if (activePeel && !activePeel.classList.contains('peeled-away')) {
         activePeel.style.cursor = 'grab';
         activePeel.style.zIndex = "";
+        
+        // Elastic rebound execution if let go early
+        activePeel.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), clip-path 0.3s ease";
         const baseRot = activePeel.dataset.baseRotation;
         activePeel.style.transform = `rotate(${baseRot}deg)`;
+        activePeel.style.clipPath = "none"; 
+        
+        const transientPeel = activePeel;
+        setTimeout(() => {
+            if (transientPeel && !transientPeel.classList.contains('peeled-away')) {
+                transientPeel.style.transition = "";
+            }
+        }, 300);
     }
 
     activePeel = null;
@@ -154,21 +175,22 @@ function successfulPeel() {
     const direction = peel.dataset.direction;
     const baseRot = parseFloat(peel.dataset.baseRotation) || 0;
 
-    // Fixed 3D Curl Transitions mapping to our perspective layer
+    // Final exaggerated explosive vector releases
     if (direction === 'left') {
-        peel.style.transform = `translate(-80px, 120px) rotate(${baseRot - 45}deg) rotateX(-110deg)`;
+        peel.style.transform = `translate(-200px, 250px) rotate(${baseRot - 90}deg) rotateX(-180deg) scale(0.05)`;
     } else if (direction === 'right') {
-        peel.style.transform = `translate(80px, 120px) rotate(${baseRot + 45}deg) rotateX(-110deg)`;
+        peel.style.transform = `translate(200px, 250px) rotate(${baseRot + 90}deg) rotateX(-180deg) scale(0.05)`;
     } else {
-        peel.style.transform = `translateY(140px) rotate(${baseRot}deg) rotateX(120deg)`;
+        peel.style.transform = `translateY(300px) rotate(${baseRot}deg) rotateX(270deg) scale(0.05)`;
     }
+
+    peel.style.clipPath = `polygon(50% 100%, 50% 100%, 100% 100%, 0% 100%)`;
 
     totalPeelsNeeded--;
     visiblePeelsCount--;
     
     document.getElementById('peel-counter').innerText = `Peels Remaining: ${totalPeelsNeeded}`;
 
-    // Auto-replenish queue safely from stack up to the 20 element max screen limit
     if (totalPeelsNeeded >= 20 && visiblePeelsCount < 20) {
         spawnPeelElement();
     }
