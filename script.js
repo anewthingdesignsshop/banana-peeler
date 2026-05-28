@@ -47,11 +47,11 @@ function spawnPeelElement() {
 
     // Layer 1: The unpeeled static body that shaves downwards
     const staticBase = document.createElement('div');
-    staticBase.classList.add('peel-shape', 'static-base');
+    staticBase.classList.add('static-base');
 
     // Layer 2: The active moving flap that turns inside out
     const rollingFlap = document.createElement('div');
-    rollingFlap.classList.add('peel-inner', 'rolling-flap');
+    rollingFlap.classList.add('rolling-flap');
 
     if (randomDir === 'down') {
         staticBase.style.background = "linear-gradient(90deg, #e0b20c 0%, #f5d742 30%, #fae366 70%, #dbad0b 100%)";
@@ -130,7 +130,7 @@ function drag(e) {
     } else if (direction === 'right' && deltaX > 0) {
         activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.1)}deg) translateX(${deltaX * 0.2}px) translateY(${deltaX * 0.1}px)`;
     } else if (direction === 'down' && deltaY > 0) {
-        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.2px})`;
+        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.2}px)`;
     }
 
     if (
@@ -138,7 +138,6 @@ function drag(e) {
         (direction === 'right' && deltaX > PEEL_THRESHOLD) ||
         (direction === 'down' && deltaY > PEEL_THRESHOLD)
     ) {
-        // Pass the pointer event ID down to cleanly clear hardware input hooks
         successfulPeel(e.pointerId);
     }
 }
@@ -190,7 +189,6 @@ function successfulPeel(pointerId) {
     const peel = activePeel;
     peel.classList.add('peeled-away');
     
-    // FIXED: Safely disconnect pointer processing loops immediately so other buttons click instantly
     try { peel.releasePointerCapture(pointerId); } catch(err) {}
 
     const direction = peel.dataset.direction;
