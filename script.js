@@ -1,7 +1,15 @@
-// Load the level from localStorage on start, fallback to 1 if it's their first time playing
-let currentLevel = parseInt(localStorage.getItem('banana_peel_level')) || 1;
-const maxLevels = 20;
+// 1. Immediately read the saved level on load
+let currentLevel = 1;
+try {
+    const saved = localStorage.getItem('banana_peel_level');
+    if (saved) {
+        currentLevel = parseInt(saved, 10);
+    }
+} catch (e) {
+    console.warn("Storage access blocked:", e);
+}
 
+const maxLevels = 20;
 let totalPeelsNeeded = 3; 
 let visiblePeelsCount = 0; 
 
@@ -12,11 +20,21 @@ const PEEL_THRESHOLD = 80;
 
 document.addEventListener("DOMContentLoaded", () => {
     startLevel();
+    
+    // Hard backup event binder
+    const nextBtn = document.getElementById('next-btn');
+    if (nextBtn) {
+        nextBtn.onclick = goToNextLevel;
+    }
 });
 
 function startLevel() {
-    // Save the current level to localStorage right as the level starts
-    localStorage.setItem('banana_peel_level', currentLevel);
+    // Force write the validated level to disk immediately
+    try {
+        localStorage.setItem('banana_peel_level', currentLevel);
+    } catch (e) {
+        console.error("Write failed:", e);
+    }
 
     document.getElementById('level-display').innerText = `Level ${currentLevel}/${maxLevels}`;
     document.getElementById('win-message').innerText = "";
@@ -223,17 +241,23 @@ function successfulPeel(pointerId) {
 function handleLevelWin() {
     if (currentLevel === maxLevels) {
         document.getElementById('win-message').innerText = "🎉 Unbelievable! You completed all 20 Levels! You are the Banana Master! 👑";
-        // Optional: clear save file if they complete the entire game
-        localStorage.removeItem('banana_peel_level');
+        try { localStorage.removeItem('banana_peel_level'); } catch(e){}
     } else {
         document.getElementById('win-message').innerText = "Level Complete! 🍌";
         document.getElementById('next-btn').style.display = 'inline-block';
     }
 }
 
+// FIX: Save state to storage *before* updating layout metrics
 function goToNextLevel() {
     if (currentLevel < maxLevels) {
         currentLevel++;
+        try {
+            localStorage.setItem('banana_peel_level', currentLevel);
+        } catch (e) {}
         startLevel();
     }
 }
+
+// Protect window scope exposure 
+window.goToNextLevel = goToNextLevel;
