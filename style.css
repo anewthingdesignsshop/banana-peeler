@@ -37,7 +37,7 @@ body {
     width: 200px;
     height: 250px;
     margin: 0 auto 20px;
-    perspective: 1000px;
+    perspective: 1000px; /* Essential depth for 3D skin flipping */
 }
 
 /* --- THE INTERNAL FRUIT --- */
@@ -136,14 +136,14 @@ body {
     width: 78px;
     height: 176px;
     bottom: 34px;
-    transform-origin: bottom center;
+    transform-origin: bottom center; /* Everything curls cleanly toward the stem anchor */
     touch-action: none;
     cursor: grab;
     display: block !important;
     transform-style: preserve-3d;
 }
 
-/* Base layouts for the layered skins */
+/* Beautiful organic banana curves preserved entirely */
 .static-base, .rolling-flap {
     position: absolute;
     width: 100%;
@@ -165,7 +165,7 @@ body {
 .rolling-flap {
     background: linear-gradient(90deg, #eae5be 0%, #fffde6 50%, #eae5be 100%);
     border: 2px solid #e2dcad;
-    transform: rotateY(180deg);
+    transform: rotateY(180deg); /* Faces inward initially */
     backface-visibility: hidden;
     z-index: 1;
 }
@@ -174,9 +174,9 @@ body {
 .right-peel { left: 64px; z-index: 13; }
 .front-peel { left: 62.5px; z-index: 15; }
 
-/* --- FLING TRANSITION --- */
+/* --- SEAMLESS FLY AWAY --- */
 .peeled-away {
-    transition: transform 0.6s ease-in, opacity 0.3s ease-out !important;
+    transition: transform 0.5s ease-in, opacity 0.3s ease-out !important;
     opacity: 0 !important;
     pointer-events: none;
 }
