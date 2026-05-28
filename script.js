@@ -45,7 +45,7 @@ function spawnPeelElement() {
     else if (randomDir === 'right') peel.classList.add('right-peel');
     else peel.classList.add('front-peel');
 
-    // BUILD NESTED 3D JOINT SKELETON TREE
+    // BUILD CHAINED SKELETON
     let rootSegment = null;
     let parentSegment = null;
 
@@ -67,17 +67,17 @@ function spawnPeelElement() {
         segment.appendChild(shapeInner);
 
         if (i === 1) {
-            rootSegment = segment; // Bottom Hinge base linked directly to container
+            rootSegment = segment;
         } else {
-            parentSegment.appendChild(segment); // Nest deeper to inherit cascading rotations
+            parentSegment.appendChild(segment);
         }
         parentSegment = segment;
     }
 
     peel.appendChild(rootSegment);
 
-    // Apply strict clean stacking micro-rotations
-    let randomRotation = (Math.random() * 6) - 3; 
+    // Strict alignment micro-rotations to keep everything locked in the banana silhouette
+    let randomRotation = (Math.random() * 4) - 2; 
     peel.style.transform = `rotate(${randomRotation}deg)`;
     peel.dataset.baseRotation = randomRotation; 
 
@@ -91,7 +91,7 @@ function startDrag(e) {
     activePeel = e.currentTarget;
     activePeel.style.cursor = 'grabbing';
     activePeel.style.zIndex = 100;
-    setTreeTransitions(activePeel, ""); // Strip old animations for direct tracking response
+    setTreeTransitions(activePeel, "");
 
     activePeel.setPointerCapture(e.pointerId);
     startX = e.clientX;
@@ -117,29 +117,32 @@ function drag(e) {
     if (direction === 'right') progress = Math.min(Math.abs(deltaX) / PEEL_THRESHOLD, 1);
     if (direction === 'down') progress = Math.min(Math.max(0, deltaY) / PEEL_THRESHOLD, 1);
 
-    // Distributed Joint Physics: Each segment curls back up to -38 degrees.
-    // Combined across 5 joints, this creates a beautiful, circular 190-degree spiral loop!
-    const segmentTargetRotX = progress * -38; 
+    // Distributed Joint Physics: Curvature math applied down the spine hierarchy chain
+    // Segment 1 (base) rotates less, while segments 2-5 curl progressively further
+    const segmentTargetRotX = progress * -35; 
     const segments = activePeel.querySelectorAll('.peel-segment');
 
     segments.forEach((seg) => {
-        // Front peel curls forward (+X), side peels curl backward (-X)
         if (direction === 'down') {
-            seg.style.transform = `rotateX(${progress * 38}deg)`;
+            seg.style.transform = `rotateX(${progress * 35}deg)`;
         } else {
-            seg.style.transform = `rotateX(${segmentTargetRotX}deg)`;
+            // Check if it's the root segment (seg-1) to reduce base translation tilt
+            if (seg.classList.contains('seg-1')) {
+                seg.style.transform = `rotateX(${segmentTargetRotX * 0.5}deg)`;
+            } else {
+                seg.style.transform = `translateY(-100%) rotateX(${segmentTargetRotX}deg)`;
+            }
         }
     });
 
-    // Translate the anchor point slightly downward as it rolls down the core
-    const liveTranslateY = progress * 20;
+    const liveTranslateY = progress * 15;
 
     if (direction === 'left' && deltaX < 0) {
-        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.1)}deg) translateY(${liveTranslateY}px) translateX(${deltaX * 0.1}px)`;
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.08)}deg) translateY(${liveTranslateY}px) translateX(${deltaX * 0.1}px)`;
     } else if (direction === 'right' && deltaX > 0) {
-        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.1)}deg) translateY(${liveTranslateY}px) translateX(${deltaX * 0.1}px)`;
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.08)}deg) translateY(${liveTranslateY}px) translateX(${deltaX * 0.1}px)`;
     } else if (direction === 'down' && deltaY > 0) {
-        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.3}px)`;
+        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.25}px)`;
     }
 
     if (
@@ -162,14 +165,19 @@ function stopDrag(e) {
         activePeel.style.cursor = 'grab';
         activePeel.style.zIndex = "";
         
-        // Snap-back animation curves on release
-        setTreeTransitions(activePeel, "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2);");
+        setTreeTransitions(activePeel, "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2)");
         
         const baseRot = activePeel.dataset.baseRotation;
         activePeel.style.transform = `rotate(${baseRot}deg)`;
         
         const segments = activePeel.querySelectorAll('.peel-segment');
-        segments.forEach(seg => seg.style.transform = "rotateX(0deg)");
+        segments.forEach(seg => {
+            if (seg.classList.contains('seg-1')) {
+                seg.style.transform = "rotateX(0deg)";
+            } else {
+                seg.style.transform = "translateY(-100%) rotateX(0deg)";
+            }
+        });
 
         const transientPeel = activePeel;
         setTimeout(() => {
@@ -189,19 +197,23 @@ function successfulPeel() {
     const direction = peel.dataset.direction;
     const baseRot = parseFloat(peel.dataset.baseRotation) || 0;
 
-    // Direct skeletal roll down to the base roots before vanishing
     const segments = peel.querySelectorAll('.peel-segment');
     segments.forEach(seg => {
         seg.style.transition = "transform 0.5s ease-in !important";
-        seg.style.transform = (direction === 'down') ? "rotateX(60deg)" : "rotateX(-60deg)";
+        const rotVal = (direction === 'down') ? "rotateX(55deg)" : "rotateX(-55deg)";
+        if (seg.classList.contains('seg-1')) {
+            seg.style.transform = rotVal;
+        } else {
+            seg.style.transform = `translateY(-100%) ${rotVal}`;
+        }
     });
 
     if (direction === 'left') {
-        peel.style.transform = `rotate(${baseRot - 30}deg) translate(-80px, 120px) scale(0.1)`;
+        peel.style.transform = `rotate(${baseRot - 25}deg) translate(-70px, 100px) scale(0.05)`;
     } else if (direction === 'right') {
-        peel.style.transform = `rotate(${baseRot + 30}deg) translate(80px, 120px) scale(0.1)`;
+        peel.style.transform = `rotate(${baseRot + 25}deg) translate(70px, 100px) scale(0.05)`;
     } else {
-        peel.style.transform = `rotate(${baseRot}deg) translateY(180px) scale(0.1)`;
+        peel.style.transform = `rotate(${baseRot}deg) translateY(160px) scale(0.05)`;
     }
 
     totalPeelsNeeded--;
@@ -220,7 +232,6 @@ function successfulPeel() {
     activePeel = null;
 }
 
-// Helper to inject transitions smoothly down the skeleton node tree
 function setTreeTransitions(peelElement, transitionValue) {
     peelElement.style.transition = transitionValue;
     const segments = peelElement.querySelectorAll('.peel-segment');
