@@ -45,18 +45,19 @@ function spawnPeelElement() {
     else if (randomDir === 'right') peel.classList.add('right-peel');
     else peel.classList.add('front-peel');
 
-    const staticBase = document.createElement('div');
-    staticBase.classList.add('static-base');
+    // Using the original class names to bypass any old CSS caching bugs
+    const shapeOuter = document.createElement('div');
+    shapeOuter.classList.add('peel-shape');
 
-    const rollingFlap = document.createElement('div');
-    rollingFlap.classList.add('rolling-flap');
+    const shapeInner = document.createElement('div');
+    shapeInner.classList.add('peel-inner');
 
     if (randomDir === 'down') {
-        staticBase.style.background = "linear-gradient(90deg, #e0b20c 0%, #f5d742 30%, #fae366 70%, #dbad0b 100%)";
+        shapeOuter.style.background = "linear-gradient(90deg, #e0b20c 0%, #f5d742 30%, #fae366 70%, #dbad0b 100%)";
     }
 
-    peel.appendChild(staticBase);
-    peel.appendChild(rollingFlap);
+    peel.appendChild(shapeOuter);
+    peel.appendChild(shapeInner);
 
     let randomRotation = (Math.random() * 4) - 2; 
     peel.style.transform = `rotate(${randomRotation}deg)`;
@@ -73,8 +74,8 @@ function startDrag(e) {
     activePeel.style.cursor = 'grabbing';
     activePeel.style.zIndex = 100;
     
-    const base = activePeel.querySelector('.static-base');
-    const flap = activePeel.querySelector('.rolling-flap');
+    const base = activePeel.querySelector('.peel-shape');
+    const flap = activePeel.querySelector('.peel-inner');
     activePeel.style.transition = "";
     if (base) base.style.transition = "";
     if (flap) flap.style.transition = "";
@@ -103,10 +104,10 @@ function drag(e) {
     if (direction === 'right') progress = Math.min(Math.abs(deltaX) / PEEL_THRESHOLD, 1);
     if (direction === 'down') progress = Math.min(Math.max(0, deltaY) / PEEL_THRESHOLD, 1);
 
-    const base = activePeel.querySelector('.static-base');
-    const flap = activePeel.querySelector('.rolling-flap');
+    const base = activePeel.querySelector('.peel-shape');
+    const flap = activePeel.querySelector('.peel-inner');
 
-    // Smooth pure 3D scaling loops (Keeps the organic silhouette completely intact!)
+    // 3D scaling compression: preserves the organic round tip profile beautifully
     const liveScaleY = 1 - (progress * 0.95); 
     const rollAngle = progress * 140; 
 
@@ -120,7 +121,6 @@ function drag(e) {
         }
     }
 
-    // Directional layout shifts
     if (direction === 'left' && deltaX < 0) {
         activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.08)}deg) translateX(${deltaX * 0.15}px) translateY(${Math.abs(deltaX) * 0.1}px)`;
     } else if (direction === 'right' && deltaX > 0) {
@@ -149,8 +149,8 @@ function stopDrag(e) {
         activePeel.style.cursor = 'grab';
         activePeel.style.zIndex = "";
         
-        const base = activePeel.querySelector('.static-base');
-        const flap = activePeel.querySelector('.rolling-flap');
+        const base = activePeel.querySelector('.peel-shape');
+        const flap = activePeel.querySelector('.peel-inner');
 
         const snapTransition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
         activePeel.style.transition = snapTransition;
@@ -167,8 +167,8 @@ function stopDrag(e) {
         setTimeout(() => {
             if (transientPeel && !transientPeel.classList.contains('peeled-away')) {
                 transientPeel.style.transition = "";
-                const b = transientPeel.querySelector('.static-base');
-                const f = transientPeel.querySelector('.rolling-flap');
+                const b = transientPeel.querySelector('.peel-shape');
+                const f = transientPeel.querySelector('.peel-inner');
                 if (b) b.style.transition = "";
                 if (f) f.style.transition = "";
             }
@@ -220,6 +220,7 @@ function handleLevelWin() {
     }
 }
 
+// Fixed double-tap bug here by avoiding state traps
 function goToNextLevel() {
     if (currentLevel < maxLevels) {
         currentLevel++;
