@@ -3,16 +3,20 @@ let startTime;
 let timerInterval;
 let gameActive = false;
 
+// Dragging math tracking
 let activePeel = null;
 let startX = 0;
 let startY = 0;
 const PEEL_THRESHOLD = 80;
 
-// Initialize on load
+// Scoreboard hold parameters
+let holdCounter = 3;
+let holdInterval;
+
+// Setup on boot
 document.addEventListener("DOMContentLoaded", () => {
     updateLeaderboardDOM();
     
-    // Bind events after DOM is fully ready
     const peels = document.querySelectorAll('.peel');
     peels.forEach(peel => {
         peel.addEventListener('pointerdown', startDrag);
@@ -47,6 +51,7 @@ function drag(e) {
     const deltaY = currentY - startY;
     const direction = activePeel.dataset.direction;
 
+    // Fluid drag animations depending on peel assignment direction
     if (direction === 'left' && deltaX < 0) {
         activePeel.style.transform = `translate(${deltaX}px, ${Math.abs(deltaX)*0.5}px) rotate(${-5 + deltaX*0.3}deg)`;
     } else if (direction === 'right' && deltaX > 0) {
@@ -55,6 +60,7 @@ function drag(e) {
         activePeel.style.transform = `translateY(${deltaY}px) scaleY(${1 - deltaY*0.002})`;
     }
 
+    // Evaluate rip conditions
     if (
         (direction === 'left' && deltaX < -PEEL_THRESHOLD) ||
         (direction === 'right' && deltaX > PEEL_THRESHOLD) ||
@@ -119,6 +125,7 @@ function endGame() {
     saveScore(finalTime);
 }
 
+/* --- STORAGE LOGIC --- */
 function saveScore(score) {
     let scores = JSON.parse(localStorage.getItem('bananaScores')) || [];
     scores.push(score);
@@ -140,6 +147,46 @@ function updateLeaderboardDOM() {
     scoreList.innerHTML = scores
         .map((score, index) => `<li><strong>${score.toFixed(2)}s</strong> ${index === 0 ? '👑' : ''}</li>`)
         .join('');
+}
+
+/* --- ADVANCED SCORE WIPE HOLDER --- */
+function startHoldCount() {
+    clearInterval(holdInterval);
+    holdCounter = 3;
+    
+    const btn = document.getElementById('clear-scores-btn');
+    btn.innerText = `Holding... (${holdCounter}s)`;
+    btn.classList.add('holding');
+
+    holdInterval = setInterval(() => {
+        holdCounter--;
+        if (holdCounter > 0) {
+            btn.innerText = `Holding... (${holdCounter}s)`;
+        } else {
+            clearInterval(holdInterval);
+            localStorage.removeItem('bananaScores');
+            updateLeaderboardDOM();
+            
+            btn.innerText = "Scores Wiped! 💀";
+            btn.classList.remove('holding');
+            btn.style.background = "#28a745"; 
+            btn.style.color = "white";
+            
+            setTimeout(() => {
+                btn.innerText = "Hold 3s to Reset Scores";
+                btn.removeAttribute('style');
+            }, 2000);
+        }
+    }, 1000);
+}
+
+function cancelHoldCount() {
+    clearInterval(holdInterval);
+    const btn = document.getElementById('clear-scores-btn');
+    if (btn.classList.contains('holding')) {
+        btn.innerText = "Hold 3s to Reset Scores";
+        btn.classList.remove('holding');
+    }
 }
 
 function resetGame() {
