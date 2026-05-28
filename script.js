@@ -1,37 +1,82 @@
-let peelsLeft = 3;
-let startTime;
-let timerInterval;
-let gameActive = false;
+let currentLevel = 1;
+const maxLevels = 20;
 
-// Dragging math tracking
+let totalPeelsNeeded = 3; // Tracks how many remaining peels must be discarded
+let visiblePeelsCount = 0; // Tracks current peels physically rendered on screen
+
+// Pointer tracking variables
 let activePeel = null;
 let startX = 0;
 let startY = 0;
-const PEEL_THRESHOLD = 80;
+const PEEL_THRESHOLD = 75;
 
-// Scoreboard hold parameters
-let holdCounter = 3;
-let holdInterval;
-
-// Setup on boot
 document.addEventListener("DOMContentLoaded", () => {
-    updateLeaderboardDOM();
-    
-    const peels = document.querySelectorAll('.peel');
-    peels.forEach(peel => {
-        peel.addEventListener('pointerdown', startDrag);
-    });
+    startLevel();
 });
 
-function startDrag(e) {
-    if (peelsLeft === 0) return;
+function startLevel() {
+    document.getElementById('level-display').innerText = `Level ${currentLevel}/${maxLevels}`;
+    document.getElementById('win-message').innerText = "";
+    document.getElementById('next-btn').style.display = 'none';
     
-    if (!gameActive && peelsLeft === 3) {
-        startTimer();
+    // Level scaling math: Level 1 = 3. Level 2 = 6, Level 3 = 12, etc.
+    totalPeelsNeeded = 3 * Math.pow(2, currentLevel - 1);
+    document.getElementById('peel-counter').innerText = `Peels Remaining: ${totalPeelsNeeded}`;
+
+    // Clear any previous peels
+    document.getElementById('peel-spawn-layer').innerHTML = "";
+    visiblePeelsCount = 0;
+
+    // Populate visual peels (cap rendering at 20 max to avoid browser lag)
+    let peelsToRender = Math.min(totalPeelsNeeded, 20);
+    for (let i = 0; i < peelsToRender; i++) {
+        spawnPeelElement();
+    }
+}
+
+function spawnPeelElement() {
+    visiblePeelsCount++;
+    const container = document.getElementById('peel-spawn-layer');
+    
+    const peel = document.createElement('div');
+    peel.classList.add('peel');
+    
+    // Assign a random direction layout style
+    const directions = ['left', 'right', 'down'];
+    const randomDir = directions[Math.floor(Math.random() * directions.length)];
+    peel.dataset.direction = randomDir;
+
+    // Apply slightly randomized styling variants for curvature organic layering
+    const shapeInner = document.createElement('div');
+    shapeInner.classList.add('peel-shape');
+
+    let randomRotation = (Math.random() * 24) - 12; // angle variation between -12deg and 12deg
+    
+    if (randomDir === 'left') {
+        shapeInner.style.borderRadius = "100% 0% 20% 50% / 60% 0% 10% 40%";
+    } else if (randomDir === 'right') {
+        shapeInner.style.borderRadius = "0% 100% 50% 20% / 0% 60% 40% 10%";
+    } else {
+        shapeInner.style.borderRadius = "50% 50% 30% 30% / 40% 40% 60% 60%";
+        shapeInner.style.background = "#f5d742"; // slight color variation for middle layers
     }
 
+    peel.style.transform = `rotate(${randomRotation}deg)`;
+    peel.dataset.baseRotation = randomRotation; // save base angle coordinate data
+
+    peel.appendChild(shapeInner);
+    container.appendChild(peel);
+
+    // Bind touch/mouse tracking hooks
+    peel.addEventListener('pointerdown', startDrag);
+}
+
+function startDrag(e) {
+    if (activePeel) return;
+    
     activePeel = e.currentTarget;
     activePeel.style.cursor = 'grabbing';
+    activePeel.style.zIndex = 100; // Bring currently dragged item to the very top
     activePeel.setPointerCapture(e.pointerId);
 
     startX = e.clientX;
@@ -50,17 +95,16 @@ function drag(e) {
     const deltaX = currentX - startX;
     const deltaY = currentY - startY;
     const direction = activePeel.dataset.direction;
+    const baseRot = parseFloat(activePeel.dataset.baseRotation);
 
-    // Fluid drag animations depending on peel assignment direction
     if (direction === 'left' && deltaX < 0) {
-        activePeel.style.transform = `translate(${deltaX}px, ${Math.abs(deltaX)*0.5}px) rotate(${-5 + deltaX*0.3}deg)`;
+        activePeel.style.transform = `translate(${deltaX}px, ${Math.abs(deltaX)*0.5}px) rotate(${baseRot + deltaX*0.3}deg)`;
     } else if (direction === 'right' && deltaX > 0) {
-        activePeel.style.transform = `translate(${deltaX}px, ${deltaX*0.5}px) rotate(${5 + deltaX*0.3}deg)`;
+        activePeel.style.transform = `translate(${deltaX}px, ${deltaX*0.5}px) rotate(${baseRot + deltaX*0.3}deg)`;
     } else if (direction === 'down' && deltaY > 0) {
-        activePeel.style.transform = `translateY(${deltaY}px) scaleY(${1 - deltaY*0.002})`;
+        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY}px) scaleY(${1 - deltaY*0.002})`;
     }
 
-    // Evaluate rip conditions
     if (
         (direction === 'left' && deltaX < -PEEL_THRESHOLD) ||
         (direction === 'right' && deltaX > PEEL_THRESHOLD) ||
@@ -79,9 +123,9 @@ function stopDrag(e) {
 
     if (activePeel && !activePeel.classList.contains('peeled-away')) {
         activePeel.style.cursor = 'grab';
-        if (activePeel.classList.contains('left-peel')) activePeel.style.transform = 'rotate(-5deg)';
-        else if (activePeel.classList.contains('right-peel')) activePeel.style.transform = 'rotate(5deg)';
-        else activePeel.style.transform = 'none';
+        activePeel.style.zIndex = "";
+        const baseRot = activePeel.dataset.baseRotation;
+        activePeel.style.transform = `rotate(${baseRot}deg)`;
     }
 
     activePeel = null;
@@ -92,116 +136,39 @@ function successfulPeel() {
     peel.classList.add('peeled-away');
     
     const direction = peel.dataset.direction;
-    if (direction === 'left') peel.style.transform = 'translate(-150px, 100px) rotate(-140deg)';
-    if (direction === 'right') peel.style.transform = 'translate(150px, 100px) rotate(140deg)';
-    if (direction === 'down') peel.style.transform = 'translateY(180px) scaleY(0.2)';
+    if (direction === 'left') peel.style.transform = 'translate(-200px, 100px) rotate(-140deg)';
+    if (direction === 'right') peel.style.transform = 'translate(200px, 100px) rotate(140deg)';
+    if (direction === 'down') peel.style.transform = 'translateY(220px) scaleY(0.1)';
 
-    peelsLeft--;
+    totalPeelsNeeded--;
+    visiblePeelsCount--;
+    
+    document.getElementById('peel-counter').innerText = `Peels Remaining: ${totalPeelsNeeded}`;
 
-    if (peelsLeft === 0) {
-        endGame();
+    // Dynamic endless refill check: if we need more down the line, auto-replenish visual space
+    if (totalPeelsNeeded >= 20 && visiblePeelsCount < 20) {
+        spawnPeelElement();
+    }
+
+    if (totalPeelsNeeded === 0) {
+        handleLevelWin();
     }
     
     activePeel = null;
 }
 
-function startTimer() {
-    startTime = Date.now();
-    gameActive = true;
-    timerInterval = setInterval(() => {
-        let elapsedTime = (Date.now() - startTime) / 1000;
-        document.getElementById('timer').innerText = `Time: ${elapsedTime.toFixed(2)}s`;
-    }, 10);
-}
-
-function endGame() {
-    clearInterval(timerInterval);
-    gameActive = false;
-    let finalTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2));
-    
-    document.getElementById('win-message').innerText = `Victory! Clean peel in ${finalTime}s!`;
-    document.getElementById('reset-btn').style.display = 'inline-block';
-
-    saveScore(finalTime);
-}
-
-/* --- STORAGE LOGIC --- */
-function saveScore(score) {
-    let scores = JSON.parse(localStorage.getItem('bananaScores')) || [];
-    scores.push(score);
-    scores.sort((a, b) => a - b);
-    scores = scores.slice(0, 5);
-    localStorage.setItem('bananaScores', JSON.stringify(scores));
-    updateLeaderboardDOM();
-}
-
-function updateLeaderboardDOM() {
-    const scoreList = document.getElementById('score-list');
-    let scores = JSON.parse(localStorage.getItem('bananaScores')) || [];
-    
-    if (scores.length === 0) {
-        scoreList.innerHTML = '<li>No scores yet!</li>';
-        return;
-    }
-
-    scoreList.innerHTML = scores
-        .map((score, index) => `<li><strong>${score.toFixed(2)}s</strong> ${index === 0 ? '👑' : ''}</li>`)
-        .join('');
-}
-
-/* --- ADVANCED SCORE WIPE HOLDER --- */
-function startHoldCount() {
-    clearInterval(holdInterval);
-    holdCounter = 3;
-    
-    const btn = document.getElementById('clear-scores-btn');
-    btn.innerText = `Holding... (${holdCounter}s)`;
-    btn.classList.add('holding');
-
-    holdInterval = setInterval(() => {
-        holdCounter--;
-        if (holdCounter > 0) {
-            btn.innerText = `Holding... (${holdCounter}s)`;
-        } else {
-            clearInterval(holdInterval);
-            localStorage.removeItem('bananaScores');
-            updateLeaderboardDOM();
-            
-            btn.innerText = "Scores Wiped! 💀";
-            btn.classList.remove('holding');
-            btn.style.background = "#28a745"; 
-            btn.style.color = "white";
-            
-            setTimeout(() => {
-                btn.innerText = "Hold 3s to Reset Scores";
-                btn.removeAttribute('style');
-            }, 2000);
-        }
-    }, 1000);
-}
-
-function cancelHoldCount() {
-    clearInterval(holdInterval);
-    const btn = document.getElementById('clear-scores-btn');
-    if (btn.classList.contains('holding')) {
-        btn.innerText = "Hold 3s to Reset Scores";
-        btn.classList.remove('holding');
+function handleLevelWin() {
+    if (currentLevel === maxLevels) {
+        document.getElementById('win-message').innerText = "🎉 Unbelievable! You completed all 20 Levels! You are the Banana Master! 👑";
+    } else {
+        document.getElementById('win-message').innerText = "Level Complete! 🍌";
+        document.getElementById('next-btn').style.display = 'inline-block';
     }
 }
 
-function resetGame() {
-    peelsLeft = 3;
-    gameActive = false;
-    document.getElementById('timer').innerText = "Time: 0.00s";
-    document.getElementById('win-message').innerText = "";
-    document.getElementById('reset-btn').style.display = 'none';
-
-    const peels = document.querySelectorAll('.peel');
-    peels.forEach(peel => {
-        peel.classList.remove('peeled-away');
-        peel.style.cursor = 'grab';
-        if (peel.classList.contains('left-peel')) peel.style.transform = 'rotate(-5deg)';
-        else if (peel.classList.contains('right-peel')) peel.style.transform = 'rotate(5deg)';
-        else peel.style.transform = 'none';
-    });
+function goToNextLevel() {
+    if (currentLevel < maxLevels) {
+        currentLevel++;
+        startLevel();
+    }
 }
