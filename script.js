@@ -1,213 +1,244 @@
-body {
-    background-color: #fcedc0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    user-select: none;
+let currentLevel = 1;
+const maxLevels = 20;
+
+let totalPeelsNeeded = 3; 
+let visiblePeelsCount = 0; 
+
+let activePeel = null;
+let startX = 0;
+let startY = 0;
+const PEEL_THRESHOLD = 85;
+
+document.addEventListener("DOMContentLoaded", () => {
+    startLevel();
+});
+
+function startLevel() {
+    document.getElementById('level-display').innerText = `Level ${currentLevel}/${maxLevels}`;
+    document.getElementById('win-message').innerText = "";
+    document.getElementById('next-btn').style.display = 'none';
+    
+    totalPeelsNeeded = 3 * Math.pow(2, currentLevel - 1);
+    document.getElementById('peel-counter').innerText = `Peels Remaining: ${totalPeelsNeeded}`;
+
+    document.getElementById('peel-spawn-layer').innerHTML = "";
+    visiblePeelsCount = 0;
+
+    let peelsToRender = Math.min(totalPeelsNeeded, 20);
+    for (let i = 0; i < peelsToRender; i++) {
+        spawnPeelElement();
+    }
 }
 
-.game-container {
-    text-align: center;
-    background: white;
-    padding: 30px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    width: 320px;
+function spawnPeelElement() {
+    visiblePeelsCount++;
+    const container = document.getElementById('peel-spawn-layer');
+    
+    const peel = document.createElement('div');
+    peel.classList.add('peel');
+    
+    const directions = ['left', 'right', 'down'];
+    const randomDir = directions[Math.floor(Math.random() * directions.length)];
+    peel.dataset.direction = randomDir;
+
+    if (randomDir === 'left') peel.classList.add('left-peel');
+    else if (randomDir === 'right') peel.classList.add('right-peel');
+    else peel.classList.add('front-peel');
+
+    // BUILD NESTED 3D JOINT SKELETON TREE
+    let rootSegment = null;
+    let parentSegment = null;
+
+    for (let i = 1; i <= 5; i++) {
+        const segment = document.createElement('div');
+        segment.classList.add('peel-segment', `seg-${i}`);
+
+        const shapeOuter = document.createElement('div');
+        shapeOuter.classList.add('peel-shape');
+
+        const shapeInner = document.createElement('div');
+        shapeInner.classList.add('peel-inner');
+
+        if (randomDir === 'down') {
+            shapeOuter.style.background = "linear-gradient(90deg, #e0b20c 0%, #f5d742 30%, #fae366 70%, #dbad0b 100%)";
+        }
+
+        segment.appendChild(shapeOuter);
+        segment.appendChild(shapeInner);
+
+        if (i === 1) {
+            rootSegment = segment; // Bottom Hinge base linked directly to container
+        } else {
+            parentSegment.appendChild(segment); // Nest deeper to inherit cascading rotations
+        }
+        parentSegment = segment;
+    }
+
+    peel.appendChild(rootSegment);
+
+    // Apply strict clean stacking micro-rotations
+    let randomRotation = (Math.random() * 6) - 3; 
+    peel.style.transform = `rotate(${randomRotation}deg)`;
+    peel.dataset.baseRotation = randomRotation; 
+
+    container.appendChild(peel);
+    peel.addEventListener('pointerdown', startDrag);
 }
 
-#level-display {
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: #e67e22;
-    margin-bottom: 5px;
+function startDrag(e) {
+    if (activePeel) return;
+    
+    activePeel = e.currentTarget;
+    activePeel.style.cursor = 'grabbing';
+    activePeel.style.zIndex = 100;
+    setTreeTransitions(activePeel, ""); // Strip old animations for direct tracking response
+
+    activePeel.setPointerCapture(e.pointerId);
+    startX = e.clientX;
+    startY = e.clientY;
+
+    activePeel.addEventListener('pointermove', drag);
+    activePeel.addEventListener('pointerup', stopDrag);
 }
 
-#peel-counter {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #7f8c8d;
-    margin-bottom: 25px;
+function drag(e) {
+    if (!activePeel) return;
+
+    const currentX = e.clientX;
+    const currentY = e.clientY;
+    
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+    const direction = activePeel.dataset.direction;
+    const baseRot = parseFloat(activePeel.dataset.baseRotation) || 0;
+
+    let progress = 0;
+    if (direction === 'left') progress = Math.min(Math.abs(deltaX) / PEEL_THRESHOLD, 1);
+    if (direction === 'right') progress = Math.min(Math.abs(deltaX) / PEEL_THRESHOLD, 1);
+    if (direction === 'down') progress = Math.min(Math.max(0, deltaY) / PEEL_THRESHOLD, 1);
+
+    // Distributed Joint Physics: Each segment curls back up to -38 degrees.
+    // Combined across 5 joints, this creates a beautiful, circular 190-degree spiral loop!
+    const segmentTargetRotX = progress * -38; 
+    const segments = activePeel.querySelectorAll('.peel-segment');
+
+    segments.forEach((seg) => {
+        // Front peel curls forward (+X), side peels curl backward (-X)
+        if (direction === 'down') {
+            seg.style.transform = `rotateX(${progress * 38}deg)`;
+        } else {
+            seg.style.transform = `rotateX(${segmentTargetRotX}deg)`;
+        }
+    });
+
+    // Translate the anchor point slightly downward as it rolls down the core
+    const liveTranslateY = progress * 20;
+
+    if (direction === 'left' && deltaX < 0) {
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.1)}deg) translateY(${liveTranslateY}px) translateX(${deltaX * 0.1}px)`;
+    } else if (direction === 'right' && deltaX > 0) {
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.1)}deg) translateY(${liveTranslateY}px) translateX(${deltaX * 0.1}px)`;
+    } else if (direction === 'down' && deltaY > 0) {
+        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.3}px)`;
+    }
+
+    if (
+        (direction === 'left' && deltaX < -PEEL_THRESHOLD) ||
+        (direction === 'right' && deltaX > PEEL_THRESHOLD) ||
+        (direction === 'down' && deltaY > PEEL_THRESHOLD)
+    ) {
+        successfulPeel();
+    }
 }
 
-/* Container holding the constructed banana */
-.banana-box {
-    position: relative;
-    width: 200px;
-    height: 250px;
-    margin: 0 auto 20px;
-    perspective: 800px; /* 3D depth field */
+function stopDrag(e) {
+    if (!activePeel) return;
+
+    activePeel.releasePointerCapture(e.pointerId);
+    activePeel.removeEventListener('pointermove', drag);
+    activePeel.removeEventListener('pointerup', stopDrag);
+
+    if (activePeel && !activePeel.classList.contains('peeled-away')) {
+        activePeel.style.cursor = 'grab';
+        activePeel.style.zIndex = "";
+        
+        // Snap-back animation curves on release
+        setTreeTransitions(activePeel, "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2);");
+        
+        const baseRot = activePeel.dataset.baseRotation;
+        activePeel.style.transform = `rotate(${baseRot}deg)`;
+        
+        const segments = activePeel.querySelectorAll('.peel-segment');
+        segments.forEach(seg => seg.style.transform = "rotateX(0deg)");
+
+        const transientPeel = activePeel;
+        setTimeout(() => {
+            if (transientPeel && !transientPeel.classList.contains('peeled-away')) {
+                setTreeTransitions(transientPeel, "");
+            }
+        }, 400);
+    }
+
+    activePeel = null;
 }
 
-/* --- THE INTERNAL FRUIT --- */
-.banana-core {
-    position: absolute;
-    width: 75px;
-    height: 175px;
-    bottom: 35px;
-    left: 62.5px;
-    z-index: 1;
+function successfulPeel() {
+    const peel = activePeel;
+    peel.classList.add('peeled-away');
+    
+    const direction = peel.dataset.direction;
+    const baseRot = parseFloat(peel.dataset.baseRotation) || 0;
+
+    // Direct skeletal roll down to the base roots before vanishing
+    const segments = peel.querySelectorAll('.peel-segment');
+    segments.forEach(seg => {
+        seg.style.transition = "transform 0.5s ease-in !important";
+        seg.style.transform = (direction === 'down') ? "rotateX(60deg)" : "rotateX(-60deg)";
+    });
+
+    if (direction === 'left') {
+        peel.style.transform = `rotate(${baseRot - 30}deg) translate(-80px, 120px) scale(0.1)`;
+    } else if (direction === 'right') {
+        peel.style.transform = `rotate(${baseRot + 30}deg) translate(80px, 120px) scale(0.1)`;
+    } else {
+        peel.style.transform = `rotate(${baseRot}deg) translateY(180px) scale(0.1)`;
+    }
+
+    totalPeelsNeeded--;
+    visiblePeelsCount--;
+    
+    document.getElementById('peel-counter').innerText = `Peels Remaining: ${totalPeelsNeeded}`;
+
+    if (totalPeelsNeeded >= 20 && visiblePeelsCount < 20) {
+        spawnPeelElement();
+    }
+
+    if (totalPeelsNeeded === 0) {
+        handleLevelWin();
+    }
+    
+    activePeel = null;
 }
 
-.fruit-body {
-    width: 100%;
-    height: 100%;
-    background: #fffcd1;
-    border-radius: 50% 50% 30% 30% / 50% 50% 50% 50%;
-    border: 3px solid #f1eb9c;
-    position: relative;
-    box-shadow: inset -8px 0 15px rgba(241, 235, 156, 0.4);
+// Helper to inject transitions smoothly down the skeleton node tree
+function setTreeTransitions(peelElement, transitionValue) {
+    peelElement.style.transition = transitionValue;
+    const segments = peelElement.querySelectorAll('.peel-segment');
+    segments.forEach(seg => seg.style.transition = transitionValue);
 }
 
-.fruit-tip {
-    position: absolute;
-    bottom: -4px;
-    left: 31px;
-    width: 14px;
-    height: 8px;
-    background: #5c4033;
-    border-radius: 50%;
+function handleLevelWin() {
+    if (currentLevel === maxLevels) {
+        document.getElementById('win-message').innerText = "🎉 Unbelievable! You completed all 20 Levels! You are the Banana Master! 👑";
+    } else {
+        document.getElementById('win-message').innerText = "Level Complete! 🍌";
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
 }
 
-/* --- CHIBI FACE --- */
-.face {
-    position: absolute;
-    width: 100%;
-    top: 40px;
-    display: flex;
-    justify-content: center;
-    height: 40px;
-}
-
-.eye {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    background: #2c3e50;
-    border-radius: 50%;
-    top: 5px;
-}
-.left-eye { left: 16px; }
-.right-eye { right: 16px; }
-
-.shine {
-    width: 3px;
-    height: 3px;
-    background: white;
-    border-radius: 50%;
-    position: absolute;
-    top: 2px;
-    left: 2px;
-}
-
-.mouth {
-    position: absolute;
-    width: 12px;
-    height: 8px;
-    border-bottom: 3px solid #2c3e50;
-    border-radius: 0 0 10px 10px;
-    top: 14px;
-}
-
-.blush {
-    position: absolute;
-    width: 8px;
-    height: 5px;
-    background: #ff7675;
-    background: rgba(255, 118, 117, 0.6);
-    border-radius: 50%;
-    top: 13px;
-}
-.left-blush { left: 10px; }
-.right-blush { right: 10px; }
-
-
-/* --- SPAWN LAYER CONTAINER --- */
-#peel-spawn-layer {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    z-index: 10;
-}
-
-/* --- THE PEELS --- */
-.peel {
-    position: absolute;
-    width: 76px; /* Matched perfectly to the 75px core (+1px border bleed) */
-    height: 176px;
-    bottom: 34px;
-    transform-origin: bottom center; /* CRITICAL: Everything rolls down to this point */
-    touch-action: none;
-    cursor: grab;
-    display: block !important;
-    transform-style: preserve-3d; 
-}
-
-/* Outer Skin (Yellow) */
-.peel-shape {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, #e5b60d 0%, #f1c40f 30%, #fcd63b 70%, #d4ac0d 100%) !important;
-    border: 2px solid #d4ac0d;
-    backface-visibility: hidden; 
-    z-index: 2;
-}
-
-/* Inner Skin (Cream White) */
-.peel-inner {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, #eae5be 0%, #fffde6 50%, #eae5be 100%);
-    border: 2px solid #e2dcad;
-    transform: rotateY(180deg); 
-    backface-visibility: hidden;
-    z-index: 1;
-}
-
-/* CONFINED BASE COORDINATES:
-   All layers spawn directly on top of the 62.5px core center.
-   No more outward displacement!
-*/
-.left-peel { left: 62px; z-index: 14; }
-.right-peel { left: 63px; z-index: 13; }
-.front-peel { left: 62.5px; z-index: 15; }
-
-/* --- CLEAN MOTION SLICK FINISH --- */
-.peeled-away {
-    transition: transform 0.7s cubic-bezier(0.55, 0.055, 0.675, 0.19), opacity 0.4s ease-in !important;
-    opacity: 0 !important;
-    pointer-events: none;
-}
-
-#next-btn {
-    background-color: #2ecc71;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    font-size: 1.1rem;
-    border-radius: 25px;
-    cursor: pointer;
-    font-weight: bold;
-    display: none;
-    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
-    transition: transform 0.1s;
-}
-#next-btn:active { transform: scale(0.95); }
-
-#win-message {
-    margin-top: 15px;
-    font-size: 1.3rem;
-    color: #27ae60;
-    font-weight: bold;
-}
-
-@media (max-width: 400px) {
-    .game-container { width: 90%; padding: 20px 15px; }
-    .banana-box { transform: scale(0.9); }
+function goToNextLevel() {
+    if (currentLevel < maxLevels) {
+        currentLevel++;
+        startLevel();
+    }
 }
