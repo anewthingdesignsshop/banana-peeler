@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banana Peeler Pro</title>
+    <title>Sleek Banana Peeler</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,17 +13,27 @@
         <div id="timer">Time: 0.00s</div>
         
         <div class="banana-box">
-            <div class="banana-core">🍌</div>
-            <div class="peel left-peel" data-direction="left">🟨</div>
-            <div class="peel right-peel" data-direction="right">🟨</div>
-            <div class="peel front-peel" data-direction="down">🟨</div>
+            <div class="banana-core">
+                <div class="fruit-body"></div>
+                <div class="fruit-tip"></div>
+            </div>
+            
+            <div class="peel left-peel" data-direction="left">
+                <div class="peel-shape"></div>
+            </div>
+            <div class="peel right-peel" data-direction="right">
+                <div class="peel-shape"></div>
+            </div>
+            <div class="peel front-peel" data-direction="down">
+                <div class="peel-shape"></div>
+            </div>
         </div>
 
         <button id="reset-btn" onclick="resetGame()">Peel Again</button>
         <div id="win-message"></div>
 
         <div class="leaderboard">
-            <h3>Top Peelers (Local)</h3>
+            <h3>Top Peelers</h3>
             <ol id="score-list">
                 <li>No scores yet!</li>
             </ol>
