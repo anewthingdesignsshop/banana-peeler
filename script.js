@@ -106,24 +106,21 @@ function drag(e) {
     const base = activePeel.querySelector('.static-base');
     const flap = activePeel.querySelector('.rolling-flap');
 
-    // FIX: Single-matrix scaling compression mimics rolling inside out 
-    // without flattening the curves into a straight line sliver!
-    const liveScaleY = 1 - (progress * 0.9); 
+    // Smooth pure 3D scaling loops (Keeps the organic silhouette completely intact!)
+    const liveScaleY = 1 - (progress * 0.95); 
     const rollAngle = progress * 140; 
 
     if (base && flap) {
         if (direction === 'down') {
-            // Roll forward
             base.style.transform = `rotateX(${rollAngle}deg) scaleY(${liveScaleY})`;
             flap.style.transform = `rotateY(180deg) rotateX(${rollAngle}deg) scaleY(${liveScaleY})`;
         } else {
-            // Roll backward
             base.style.transform = `rotateX(${-rollAngle}deg) scaleY(${liveScaleY})`;
             flap.style.transform = `rotateY(180deg) rotateX(${-rollAngle}deg) scaleY(${liveScaleY})`;
         }
     }
 
-    // Horizontal structural sway tracking
+    // Directional layout shifts
     if (direction === 'left' && deltaX < 0) {
         activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.08)}deg) translateX(${deltaX * 0.15}px) translateY(${Math.abs(deltaX) * 0.1}px)`;
     } else if (direction === 'right' && deltaX > 0) {
