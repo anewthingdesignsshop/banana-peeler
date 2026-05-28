@@ -38,7 +38,7 @@ body {
     width: 200px;
     height: 250px;
     margin: 0 auto 20px;
-    perspective: 800px; /* 3D depth field */
+    perspective: 1000px; /* High depth for noticeable 3D bending */
 }
 
 /* --- THE INTERNAL FRUIT --- */
@@ -123,8 +123,6 @@ body {
 .left-blush { left: 10px; }
 .right-blush { right: 10px; }
 
-
-/* --- SPAWN LAYER CONTAINER --- */
 #peel-spawn-layer {
     position: absolute;
     width: 100%;
@@ -134,53 +132,72 @@ body {
     z-index: 10;
 }
 
-/* --- THE PEELS --- */
+/* --- THE SEGMENTED MASTER COVERS --- */
 .peel {
     position: absolute;
-    width: 76px; /* Matched perfectly to the 75px core (+1px border bleed) */
+    width: 78px;
     height: 176px;
     bottom: 34px;
-    transform-origin: bottom center; /* CRITICAL: Everything rolls down to this point */
+    transform-origin: bottom center;
     touch-action: none;
     cursor: grab;
     display: block !important;
-    transform-style: preserve-3d; 
+    transform-style: preserve-3d;
 }
 
-/* Outer Skin (Yellow) */
+/* Base properties for every joint segment block */
+.peel-segment {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 20%; /* 5 segments total = 20% height each */
+    transform-origin: bottom center; /* Sub-joints bend backward from their bottom hinge */
+    transform-style: preserve-3d;
+}
+
+/* Segment positioning skeleton stack */
+.seg-5 { top: 0; }   /* Top Tip */
+.seg-4 { top: 20%; }
+.seg-3 { top: 40%; }
+.seg-2 { top: 60%; }
+.seg-1 { top: 80%; } /* Base Hinge */
+
+/* Outer Skin Facing (Yellow Cylinder Gradient) */
 .peel-shape {
     position: absolute;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, #e5b60d 0%, #f1c40f 30%, #fcd63b 70%, #d4ac0d 100%) !important;
-    border: 2px solid #d4ac0d;
-    backface-visibility: hidden; 
+    background: linear-gradient(90deg, #e5b60d 0%, #f1c40f 30%, #fcd63b 70%, #d4ac0d 100%);
+    border-left: 2px solid #d4ac0d;
+    border-right: 2px solid #d4ac0d;
+    backface-visibility: hidden;
     z-index: 2;
 }
 
-/* Inner Skin (Cream White) */
+/* Inner Skin Facing (Cream White) */
 .peel-inner {
     position: absolute;
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, #eae5be 0%, #fffde6 50%, #eae5be 100%);
-    border: 2px solid #e2dcad;
-    transform: rotateY(180deg); 
+    border-left: 2px solid #e2dcad;
+    border-right: 2px solid #e2dcad;
+    transform: rotateY(180deg);
     backface-visibility: hidden;
     z-index: 1;
 }
 
-/* CONFINED BASE COORDINATES:
-   All layers spawn directly on top of the 62.5px core center.
-   No more outward displacement!
-*/
-.left-peel { left: 62px; z-index: 14; }
-.right-peel { left: 63px; z-index: 13; }
+/* Enforced border framing per joint depth */
+.seg-5 .peel-shape, .seg-5 .peel-inner { border-radius: 50% 50% 0 0 / 100% 100% 0 0; border-top: 2px solid #d4ac0d; }
+.seg-1 .peel-shape, .seg-1 .peel-inner { border-radius: 0 0 25% 25% / 0 0 35% 35%; border-bottom: 2px solid #d4ac0d; }
+
+.left-peel { left: 61px; z-index: 14; }
+.right-peel { left: 64px; z-index: 13; }
 .front-peel { left: 62.5px; z-index: 15; }
 
-/* --- CLEAN MOTION SLICK FINISH --- */
-.peeled-away {
-    transition: transform 0.7s cubic-bezier(0.55, 0.055, 0.675, 0.19), opacity 0.4s ease-in !important;
+/* --- SMOOTH BREAKAWAY TRANSITION --- */
+.peeled-away, .peeled-away .peel-segment {
+    transition: transform 0.6s cubic-bezier(0.55, 0.055, 0.675, 0.19), opacity 0.4s ease-out !important;
     opacity: 0 !important;
     pointer-events: none;
 }
