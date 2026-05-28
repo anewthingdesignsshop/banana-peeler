@@ -146,11 +146,14 @@ body {
 }
 
 .peel-shape {
+    position: absolute; /* ADD THIS LINE */
     width: 100%;
     height: 100%;
-    background: #f1c40f !important; /* Force yellow color */
+    background: #f1c40f !important;
     border: 2px solid #d4ac0d;
     box-shadow: inset -4px 0 8px rgba(0,0,0,0.08);
+}
+
 }
 
 /* Base interaction classes */
