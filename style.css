@@ -1,0 +1,97 @@
+body {
+    background-color: #fcedc0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.game-container {
+    text-align: center;
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    width: 320px;
+}
+
+#timer {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #444;
+}
+
+.banana-box {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 20px;
+}
+
+.banana-core, .peel {
+    position: absolute;
+    font-size: 100px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    touch-action: none; /* Crucial for mobile dragging */
+}
+
+.banana-core {
+    z-index: 1;
+}
+
+.left-peel { z-index: 4; transform: rotate(-15deg); cursor: grab; }
+.right-peel { z-index: 3; transform: rotate(15deg); cursor: grab; }
+.front-peel { z-index: 2; cursor: grab; }
+
+/* Animation class when peel is successfully ripped off */
+.peeled-away {
+    transition: transform 0.5s ease, opacity 0.5s ease !important;
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+#reset-btn {
+    background-color: #f4d03f;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    display: none;
+    margin-bottom: 15px;
+}
+
+#win-message {
+    margin-top: 15px;
+    font-size: 1.2rem;
+    color: green;
+    font-weight: bold;
+}
+
+/* Leaderboard Styling */
+.leaderboard {
+    margin-top: 25px;
+    border-top: 2px dashed #f4d03f;
+    padding-top: 15px;
+}
+
+.leaderboard h3 {
+    margin: 0 0 10px 0;
+    color: #555;
+}
+
+.leaderboard ol {
+    text-align: left;
+    padding-left: 30px;
+    margin: 0;
+    color: #333;
+}
