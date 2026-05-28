@@ -45,20 +45,21 @@ function spawnPeelElement() {
     else if (randomDir === 'right') peel.classList.add('right-peel');
     else peel.classList.add('front-peel');
 
-    const shapeOuter = document.createElement('div');
-    shapeOuter.classList.add('peel-shape');
+    // Layer 1: The unpeeled static body that shaves downwards
+    const staticBase = document.createElement('div');
+    staticBase.classList.add('peel-shape', 'static-base');
 
-    const shapeInner = document.createElement('div');
-    shapeInner.classList.add('peel-inner');
+    // Layer 2: The active moving flap that turns inside out
+    const rollingFlap = document.createElement('div');
+    rollingFlap.classList.add('peel-inner', 'rolling-flap');
 
     if (randomDir === 'down') {
-        shapeOuter.style.background = "linear-gradient(90deg, #e0b20c 0%, #f5d742 30%, #fae366 70%, #dbad0b 100%)";
+        staticBase.style.background = "linear-gradient(90deg, #e0b20c 0%, #f5d742 30%, #fae366 70%, #dbad0b 100%)";
     }
 
-    peel.appendChild(shapeOuter);
-    peel.appendChild(shapeInner);
+    peel.appendChild(staticBase);
+    peel.appendChild(rollingFlap);
 
-    // Minor random tilt variance to give individual layers natural depth
     let randomRotation = (Math.random() * 4) - 2; 
     peel.style.transform = `rotate(${randomRotation}deg)`;
     peel.dataset.baseRotation = randomRotation; 
@@ -74,12 +75,11 @@ function startDrag(e) {
     activePeel.style.cursor = 'grabbing';
     activePeel.style.zIndex = 100;
     
-    // Clear old transition rules instantly for raw responsiveness
-    const outer = activePeel.querySelector('.peel-shape');
-    const inner = activePeel.querySelector('.peel-inner');
+    const base = activePeel.querySelector('.static-base');
+    const flap = activePeel.querySelector('.rolling-flap');
     activePeel.style.transition = "";
-    outer.style.transition = "";
-    inner.style.transition = "";
+    if (base) base.style.transition = "";
+    if (flap) flap.style.transition = "";
 
     activePeel.setPointerCapture(e.pointerId);
     startX = e.clientX;
@@ -105,35 +105,32 @@ function drag(e) {
     if (direction === 'right') progress = Math.min(Math.abs(deltaX) / PEEL_THRESHOLD, 1);
     if (direction === 'down') progress = Math.min(Math.max(0, deltaY) / PEEL_THRESHOLD, 1);
 
-    const outer = activePeel.querySelector('.peel-shape');
-    const inner = activePeel.querySelector('.peel-inner');
+    const base = activePeel.querySelector('.static-base');
+    const flap = activePeel.querySelector('.rolling-flap');
 
-    // AUTHENTIC CURL PHYSIC:
-    // The unpeeled section gets clipped from the top down.
-    // Simultaneously, the shape flips over on rotateX to mimic the peeled flap curling backwards!
-    const clipTop = progress * 100;
-    const liveRotateX = progress * -150; // Sweeps backward up to 150 degrees
-    const liveScaleY = 1 - (progress * 0.4); // Naturally scales down to look tighter
+    const pct = progress * 100;
 
-    // Apply clean top-down mask
-    activePeel.style.clipPath = `polygon(0% ${clipTop}%, 100% ${clipTop}%, 100% 100%, 0% 100%)`;
+    if (base && flap) {
+        // The unpeeled yellow base gets shaved down from the top
+        base.style.clipPath = `polygon(0% ${pct}%, 100% ${pct}%, 100% 100%, 0% 100%)`;
 
-    // Rotate the inner layers to flip back into 3D view space
-    if (direction === 'down') {
-        outer.style.transform = `rotateX(${progress * 150}deg) scaleY(${liveScaleY})`;
-        inner.style.transform = `rotateY(180deg) rotateX(${progress * 150}deg) scaleY(${liveScaleY})`;
-    } else {
-        outer.style.transform = `rotateX(${liveRotateX}deg) scaleY(${liveScaleY})`;
-        inner.style.transform = `rotateY(180deg) rotateX(${liveRotateX}deg) scaleY(${liveScaleY})`;
+        // The rolling flap forms the loop, scaling down to meet the baseline cleanly
+        if (direction === 'down') {
+            flap.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${pct}%, 0% ${pct}%)`;
+            flap.style.transform = `rotateY(180deg) rotateX(${progress * 140}deg) scaleY(${1 - progress * 0.3})`;
+        } else {
+            flap.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${pct}%, 0% ${pct}%)`;
+            flap.style.transform = `rotateY(180deg) rotateX(${progress * -140}deg) scaleY(${1 - progress * 0.3})`;
+        }
     }
 
-    // Directional root tracking translations
+    // Gentle global structural sway
     if (direction === 'left' && deltaX < 0) {
-        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.15)}deg) translateX(${deltaX * 0.3}px) translateY(${Math.abs(deltaX) * 0.2}px)`;
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.1)}deg) translateX(${deltaX * 0.2}px) translateY(${Math.abs(deltaX) * 0.1}px)`;
     } else if (direction === 'right' && deltaX > 0) {
-        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.15)}deg) translateX(${deltaX * 0.3}px) translateY(${deltaX * 0.2}px)`;
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.1)}deg) translateX(${deltaX * 0.2}px) translateY(${deltaX * 0.1}px)`;
     } else if (direction === 'down' && deltaY > 0) {
-        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.4}px)`;
+        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.2px})`;
     }
 
     if (
@@ -141,7 +138,8 @@ function drag(e) {
         (direction === 'right' && deltaX > PEEL_THRESHOLD) ||
         (direction === 'down' && deltaY > PEEL_THRESHOLD)
     ) {
-        successfulPeel();
+        // Pass the pointer event ID down to cleanly clear hardware input hooks
+        successfulPeel(e.pointerId);
     }
 }
 
@@ -156,51 +154,54 @@ function stopDrag(e) {
         activePeel.style.cursor = 'grab';
         activePeel.style.zIndex = "";
         
-        const outer = activePeel.querySelector('.peel-shape');
-        const inner = activePeel.querySelector('.peel-inner');
+        const base = activePeel.querySelector('.static-base');
+        const flap = activePeel.querySelector('.rolling-flap');
 
-        // Bouncy snap back to flat rest state
-        const snapTransition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-        activePeel.style.transition = snapTransition + ", clip-path 0.3s ease";
-        outer.style.transition = snapTransition;
-        inner.style.transition = snapTransition;
+        const snapTransition = "transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+        activePeel.style.transition = snapTransition;
+        if (base) base.style.transition = snapTransition + ", clip-path 0.3s ease";
+        if (flap) flap.style.transition = snapTransition + ", clip-path 0.3s ease";
 
         const baseRot = activePeel.dataset.baseRotation;
         activePeel.style.transform = `rotate(${baseRot}deg)`;
-        activePeel.style.clipPath = "none";
         
-        outer.style.transform = "rotateX(0deg) scaleY(1)";
-        inner.style.transform = "rotateY(180deg) rotateX(0deg) scaleY(1)";
+        if (base) base.style.clipPath = "none";
+        if (flap) {
+            flap.style.clipPath = "none";
+            flap.style.transform = "rotateY(180deg) rotateX(0deg) scaleY(1)";
+        }
 
         const transientPeel = activePeel;
         setTimeout(() => {
             if (transientPeel && !transientPeel.classList.contains('peeled-away')) {
                 transientPeel.style.transition = "";
-                const tOuter = transientPeel.querySelector('.peel-shape');
-                const tInner = transientPeel.querySelector('.peel-inner');
-                if (tOuter) tOuter.style.transition = "";
-                if (tInner) tInner.style.transition = "";
+                const b = transientPeel.querySelector('.static-base');
+                const f = transientPeel.querySelector('.rolling-flap');
+                if (b) b.style.transition = "";
+                if (f) f.style.transition = "";
             }
-        }, 400);
+        }, 350);
     }
 
     activePeel = null;
 }
 
-function successfulPeel() {
+function successfulPeel(pointerId) {
     const peel = activePeel;
     peel.classList.add('peeled-away');
     
+    // FIXED: Safely disconnect pointer processing loops immediately so other buttons click instantly
+    try { peel.releasePointerCapture(pointerId); } catch(err) {}
+
     const direction = peel.dataset.direction;
     const baseRot = parseFloat(peel.dataset.baseRotation) || 0;
 
-    // Fling away cleanly off layout bounds
     if (direction === 'left') {
-        peel.style.transform = `rotate(${baseRot - 45}deg) translate(-160px, 160px) scale(0.05)`;
+        peel.style.transform = `rotate(${baseRot - 35}deg) translate(-140px, 140px) scale(0.01)`;
     } else if (direction === 'right') {
-        peel.style.transform = `rotate(${baseRot + 45}deg) translate(160px, 160px) scale(0.05)`;
+        peel.style.transform = `rotate(${baseRot + 35}deg) translate(140px, 140px) scale(0.01)`;
     } else {
-        peel.style.transform = `rotate(${baseRot}deg) translateY(220px) scale(0.05)`;
+        peel.style.transform = `rotate(${baseRot}deg) translateY(200px) scale(0.01)`;
     }
 
     totalPeelsNeeded--;
