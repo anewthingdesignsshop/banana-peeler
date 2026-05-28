@@ -37,7 +37,7 @@ body {
     width: 200px;
     height: 250px;
     margin: 0 auto 20px;
-    perspective: 1000px; /* Essential depth for 3D skin flipping */
+    perspective: 1000px;
 }
 
 /* --- THE INTERNAL FRUIT --- */
@@ -47,7 +47,7 @@ body {
     height: 175px;
     bottom: 35px;
     left: 62.5px;
-    z-index: 1;
+    z-index: 1; /* Sits completely behind the covers */
 }
 
 .fruit-body {
@@ -136,21 +136,24 @@ body {
     width: 78px;
     height: 176px;
     bottom: 34px;
-    transform-origin: bottom center; /* Everything curls cleanly toward the stem anchor */
+    transform-origin: bottom center;
     touch-action: none;
     cursor: grab;
     display: block !important;
     transform-style: preserve-3d;
 }
 
-/* Beautiful organic banana curves preserved entirely */
+/* Fixed geometry sizes to bring the wrappers back visually */
 .static-base, .rolling-flap {
     position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     border-radius: 50% 50% 30% 30% / 55% 55% 45% 45%;
     box-sizing: border-box;
     transform-origin: bottom center;
+    display: block !important;
 }
 
 /* Yellow Exterior Layer */
@@ -158,23 +161,23 @@ body {
     background: linear-gradient(90deg, #e5b60d 0%, #f1c40f 30%, #fcd63b 70%, #d4ac0d 100%);
     border: 2px solid #d4ac0d;
     backface-visibility: hidden;
-    z-index: 2;
+    z-index: 2; /* Sits outwards */
 }
 
 /* Cream Interior Layer */
 .rolling-flap {
     background: linear-gradient(90deg, #eae5be 0%, #fffde6 50%, #eae5be 100%);
     border: 2px solid #e2dcad;
-    transform: rotateY(180deg); /* Faces inward initially */
+    transform: rotateY(180deg);
     backface-visibility: hidden;
-    z-index: 1;
+    z-index: 1; /* Faces inwards towards core */
 }
 
 .left-peel { left: 61px; z-index: 14; }
 .right-peel { left: 64px; z-index: 13; }
 .front-peel { left: 62.5px; z-index: 15; }
 
-/* --- SEAMLESS FLY AWAY --- */
+/* --- FLY AWAY TRANSITION --- */
 .peeled-away {
     transition: transform 0.5s ease-in, opacity 0.3s ease-out !important;
     opacity: 0 !important;
