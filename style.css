@@ -24,36 +24,98 @@ body {
     color: #444;
 }
 
+/* Container holding the constructed banana */
 .banana-box {
     position: relative;
     width: 200px;
-    height: 200px;
+    height: 250px;
     margin: 0 auto 20px;
 }
 
-.banana-core, .peel {
-    position: absolute;
-    font-size: 100px;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    user-select: none;
-    touch-action: none; /* Crucial for mobile dragging */
-}
-
+/* --- THE INTERNAL FRUIT --- */
 .banana-core {
+    position: absolute;
+    width: 60px;
+    height: 160px;
+    bottom: 40px;
+    left: 70px;
     z-index: 1;
 }
 
-.left-peel { z-index: 4; transform: rotate(-15deg); cursor: grab; }
-.right-peel { z-index: 3; transform: rotate(15deg); cursor: grab; }
-.front-peel { z-index: 2; cursor: grab; }
+.fruit-body {
+    width: 100%;
+    height: 100%;
+    background: #fffbc8;
+    border-radius: 50% 50% 20% 20% / 60% 60% 40% 40%;
+    border: 2px solid #ece59a;
+}
 
-/* Animation class when peel is successfully ripped off */
+/* The dark spot at the bottom of a banana */
+.fruit-tip {
+    position: absolute;
+    bottom: -5px;
+    left: 23px;
+    width: 14px;
+    height: 8px;
+    background: #4a3619;
+    border-radius: 50%;
+}
+
+
+/* --- THE PEELS --- */
+.peel {
+    position: absolute;
+    width: 70px;
+    height: 170px;
+    bottom: 40px;
+    transform-origin: bottom center;
+    touch-action: none;
+}
+
+/* Crafting the peel curve shape */
+.peel-shape {
+    width: 100%;
+    height: 100%;
+    background: #f1c40f;
+    border: 2px solid #d4ac0d;
+    box-shadow: inset -5px 0 10px rgba(0,0,0,0.05);
+}
+
+/* Custom tailoring each peel's look and initial position */
+.left-peel {
+    left: 45px;
+    z-index: 4;
+    transform: rotate(-5deg);
+    cursor: grab;
+}
+.left-peel .peel-shape {
+    border-radius: 100% 0% 20% 50% / 60% 0% 10% 40%;
+}
+
+.right-peel {
+    left: 85px;
+    z-index: 3;
+    transform: rotate(5deg);
+    cursor: grab;
+}
+.right-peel .peel-shape {
+    border-radius: 0% 100% 50% 20% / 0% 60% 40% 10%;
+}
+
+.front-peel {
+    left: 65px;
+    z-index: 5;
+    cursor: grab;
+}
+.front-peel .peel-shape {
+    background: #f5d742;
+    border-radius: 50% 50% 30% 30% / 40% 40% 60% 60%;
+    width: 70px;
+}
+
+/* --- INTERACTION CLASSES --- */
 .peeled-away {
-    transition: transform 0.5s ease, opacity 0.5s ease !important;
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease !important;
     opacity: 0 !important;
     pointer-events: none;
 }
@@ -77,21 +139,11 @@ body {
     font-weight: bold;
 }
 
-/* Leaderboard Styling */
 .leaderboard {
     margin-top: 25px;
     border-top: 2px dashed #f4d03f;
     padding-top: 15px;
 }
 
-.leaderboard h3 {
-    margin: 0 0 10px 0;
-    color: #555;
-}
-
-.leaderboard ol {
-    text-align: left;
-    padding-left: 30px;
-    margin: 0;
-    color: #333;
-}
+.leaderboard h3 { margin: 0 0 10px 0; color: #555; }
+.leaderboard ol { text-align: left; padding-left: 30px; margin: 0; color: #333; }
