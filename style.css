@@ -38,6 +38,7 @@ body {
     width: 200px;
     height: 250px;
     margin: 0 auto 20px;
+    perspective: 600px; /* Gives the 3D space depth for curling animation */
 }
 
 /* --- THE INTERNAL FRUIT --- */
@@ -133,10 +134,10 @@ body {
     z-index: 10;
 }
 
-/* --- THE PEELS (Snug Fit Adjustments) --- */
+/* --- THE PEELS --- */
 .peel {
     position: absolute;
-    width: 80px; /* Slightly slimmed down for better wrapping */
+    width: 80px;
     height: 185px;
     bottom: 32px;
     transform-origin: bottom center;
@@ -154,30 +155,32 @@ body {
     box-shadow: inset -4px 0 8px rgba(0,0,0,0.08);
 }
 
-/* FIXED POSITIONING: 
-   Brought coordinates inward closer to the core (left: 62.5px) 
-   so they construct a tight banana silhouette instead of a wide tulip.
-*/
+/* Positioning variants targeted by JavaScript */
 .left-peel {
-    left: 58px; /* Tightly hugs the left side of the core */
+    left: 58px;
     z-index: 14;
 }
 
 .right-peel {
-    left: 67px; /* Tightly hugs the right side of the core */
+    left: 67px;
     z-index: 13;
 }
 
 .front-peel {
-    left: 62.5px; /* Center-aligned over the face */
+    left: 62.5px;
     z-index: 15;
 }
 
-/* Base interaction classes */
+/* --- SATISFYING 3D CURL ANIMATION --- */
 .peeled-away {
-    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease !important;
-    opacity: 0 !important;
+    transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), 
+                opacity 0.6s ease, 
+                clip-path 0.8s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    opacity: 0.9 !important;
     pointer-events: none;
+    
+    /* Collapses the shape into the bottom coordinates to mimic rolling downward */
+    clip-path: polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%) !important; 
 }
 
 #next-btn {
@@ -205,12 +208,4 @@ body {
 @media (max-width: 400px) {
     .game-container { 
         width: 90%; 
-        padding: 20px 15px; 
-    }
-    /* FIXED: Scales the entire box together without erasing peel rotations */
-    .banana-box { 
-        transform: scale(0.9); 
-    }
-}
-
-}
+        padding: 20px
