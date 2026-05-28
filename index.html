@@ -3,50 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sleek Banana Peeler Pro</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Chibi Banana Peeler</title>
+    <link rel="stylesheet" href="style.css?v=chibi">
 </head>
 <body>
 
     <div class="game-container">
-        <h1>Peel the Banana!</h1>
-        <div id="timer">Time: 0.00s</div>
+        <div id="level-display">Level 1/20</div>
+        <div id="peel-counter">Peels Remaining: 3</div>
         
         <div class="banana-box">
-    <div class="banana-core">
-        <div class="fruit-body"></div>
-        <div class="fruit-tip"></div>
-    </div>
-    
-    <div class="peel left-peel" data-direction="left">
-        <div class="peel-shape"></div>
-    </div>
-    <div class="peel right-peel" data-direction="right">
-        <div class="peel-shape"></div>
-    </div>
-    <div class="peel front-peel" data-direction="down">
-        <div class="peel-shape"></div>
-    </div>
-</div>
-
-
-        <button id="reset-btn" onclick="resetGame()">Peel Again</button>
-        <div id="win-message"></div>
-
-        <div class="leaderboard">
-            <h3>Top Peelers</h3>
-            <button id="clear-scores-btn" 
-                    onmousedown="startHoldCount()" 
-                    onmouseup="cancelHoldCount()" 
-                    onmouseleave="cancelHoldCount()"
-                    ontouchstart="startHoldCount()" 
-                    ontouchend="cancelHoldCount()">
-                    Hold 3s to Reset Scores
-            </button>
-            <ol id="score-list">
-                <li>No scores yet!</li>
-            </ol>
+            <div class="banana-core">
+                <div class="fruit-body">
+                    <div class="face">
+                        <div class="eye left-eye"><div class="shine"></div></div>
+                        <div class="eye right-eye"><div class="shine"></div></div>
+                        <div class="mouth"></div>
+                        <div class="blush left-blush"></div>
+                        <div class="blush right-blush"></div>
+                    </div>
+                </div>
+                <div class="fruit-tip"></div>
+            </div>
+            
+            <div id="peel-spawn-layer"></div>
         </div>
+
+        <button id="next-btn" onclick="goToNextLevel()">Next Level</button>
+        <div id="win-message"></div>
     </div>
 
     <script src="script.js"></script>
