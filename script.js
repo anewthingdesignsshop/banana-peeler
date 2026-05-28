@@ -1,4 +1,5 @@
-let currentLevel = 1;
+// Load the level from localStorage on start, fallback to 1 if it's their first time playing
+let currentLevel = parseInt(localStorage.getItem('banana_peel_level')) || 1;
 const maxLevels = 20;
 
 let totalPeelsNeeded = 3; 
@@ -14,6 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function startLevel() {
+    // Save the current level to localStorage right as the level starts
+    localStorage.setItem('banana_peel_level', currentLevel);
+
     document.getElementById('level-display').innerText = `Level ${currentLevel}/${maxLevels}`;
     document.getElementById('win-message').innerText = "";
     document.getElementById('next-btn').style.display = 'none';
@@ -112,3 +116,124 @@ function drag(e) {
     if (base && flap) {
         if (direction === 'down') {
             base.style.transform = `rotateX(${rollAngle}deg) scaleY(${liveScaleY})`;
+            flap.style.transform = `rotateY(180deg) rotateX(${rollAngle}deg) scaleY(${liveScaleY})`;
+        } else {
+            base.style.transform = `rotateX(${-rollAngle}deg) scaleY(${liveScaleY})`;
+            flap.style.transform = `rotateY(180deg) rotateX(${-rollAngle}deg) scaleY(${liveScaleY})`;
+        }
+    }
+
+    if (direction === 'left' && deltaX < 0) {
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.08)}deg) translateX(${deltaX * 0.15}px) translateY(${Math.abs(deltaX) * 0.1}px)`;
+    } else if (direction === 'right' && deltaX > 0) {
+        activePeel.style.transform = `rotate(${baseRot + (deltaX * 0.08)}deg) translateX(${deltaX * 0.15}px) translateY(${deltaX * 0.1}px)`;
+    } else if (direction === 'down' && deltaY > 0) {
+        activePeel.style.transform = `rotate(${baseRot}deg) translateY(${deltaY * 0.15}px)`;
+    }
+
+    if (
+        (direction === 'left' && deltaX < -PEEL_THRESHOLD) ||
+        (direction === 'right' && deltaX > PEEL_THRESHOLD) ||
+        (direction === 'down' && deltaY > PEEL_THRESHOLD)
+    ) {
+        successfulPeel(e.pointerId);
+    }
+}
+
+function stopDrag(e) {
+    if (!activePeel) return;
+
+    try { activePeel.releasePointerCapture(e.pointerId); } catch(err) {}
+    activePeel.removeEventListener('pointermove', drag);
+    activePeel.removeEventListener('pointerup', stopDrag);
+
+    if (activePeel && !activePeel.classList.contains('peeled-away')) {
+        activePeel.style.cursor = 'grab';
+        activePeel.style.zIndex = "";
+        
+        const base = activePeel.querySelector('.peel-shape');
+        const flap = activePeel.querySelector('.peel-inner');
+
+        const snapTransition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+        activePeel.style.transition = snapTransition;
+        if (base) base.style.transition = snapTransition;
+        if (flap) flap.style.transition = snapTransition;
+
+        const baseRot = activePeel.dataset.baseRotation;
+        activePeel.style.transform = `rotate(${baseRot}deg)`;
+        
+        if (base) base.style.transform = "rotateX(0deg) scaleY(1)";
+        if (flap) flap.style.transform = "rotateY(180deg) rotateX(0deg) scaleY(1)";
+
+        const transientPeel = activePeel;
+        setTimeout(() => {
+            if (transientPeel && !transientPeel.classList.contains('peeled-away')) {
+                transientPeel.style.transition = "";
+                const b = transientPeel.querySelector('.peel-shape');
+                const f = transientPeel.querySelector('.peel-inner');
+                if (b) b.style.transition = "";
+                if (f) f.style.transition = "";
+            }
+        }, 400);
+    }
+
+    activePeel = null;
+}
+
+function successfulPeel(pointerId) {
+    const peel = activePeel;
+    if (!peel) return;
+
+    peel.classList.add('peeled-away');
+    
+    if (pointerId !== undefined) {
+        try { peel.releasePointerCapture(pointerId); } catch(err) {}
+    }
+
+    peel.removeEventListener('pointermove', drag);
+    peel.removeEventListener('pointerup', stopDrag);
+
+    const direction = peel.dataset.direction;
+    const baseRot = parseFloat(peel.dataset.baseRotation) || 0;
+
+    if (direction === 'left') {
+        peel.style.transform = `rotate(${baseRot - 35}deg) translate(-140px, 140px) scale(0.01)`;
+    } else if (direction === 'right') {
+        peel.style.transform = `rotate(${baseRot + 35}deg) translate(140px, 140px) scale(0.01)`;
+    } else {
+        peel.style.transform = `rotate(${baseRot}deg) translateY(200px) scale(0.01)`;
+    }
+
+    totalPeelsNeeded--;
+    visiblePeelsCount--;
+    
+    document.getElementById('peel-counter').innerText = `Peels Remaining: ${totalPeelsNeeded}`;
+
+    if (totalPeelsNeeded >= 20 && visiblePeelsCount < 20) {
+        spawnPeelElement();
+    }
+
+    if (totalPeelsNeeded === 0) {
+        handleLevelWin();
+    }
+    
+    activePeel = null;
+}
+
+function handleLevelWin() {
+    if (currentLevel === maxLevels) {
+        document.getElementById('win-message').innerText = "🎉 Unbelievable! You completed all 20 Levels! You are the Banana Master! 👑";
+        // Optional: clear save file if they complete the entire game
+        localStorage.removeItem('banana_peel_level');
+    } else {
+        document.getElementById('win-message').innerText = "Level Complete! 🍌";
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+}
+
+function goToNextLevel() {
+    if (currentLevel < maxLevels) {
+        currentLevel++;
+        startLevel();
+    }
+}
