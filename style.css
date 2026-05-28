@@ -114,6 +114,7 @@ body {
     position: absolute;
     width: 8px;
     height: 5px;
+    background: #ff7675;
     background: rgba(255, 118, 117, 0.6);
     border-radius: 50%;
     top: 13px;
@@ -122,31 +123,30 @@ body {
 .right-blush { right: 10px; }
 
 
-/* --- FIXED: SPAWN LAYER CONTAINER --- */
+/* --- SPAWN LAYER CONTAINER --- */
 #peel-spawn-layer {
     position: absolute;
     width: 100%;
     height: 100%;
     top: 0;
     left: 0;
-    z-index: 10; /* Ensures it sits tightly over the core */
+    z-index: 10;
 }
 
-/* --- THE PEELS --- */
+/* --- THE PEELS (Snug Fit Adjustments) --- */
 .peel {
     position: absolute;
-    width: 85px;
+    width: 80px; /* Slightly slimmed down for better wrapping */
     height: 185px;
     bottom: 32px;
-    left: 57.5px;
     transform-origin: bottom center;
     touch-action: none;
     cursor: grab;
-    display: block !important; /* Forces layout rendering */
+    display: block !important;
 }
 
 .peel-shape {
-    position: absolute; /* ADD THIS LINE */
+    position: absolute;
     width: 100%;
     height: 100%;
     background: #f1c40f !important;
@@ -154,6 +154,23 @@ body {
     box-shadow: inset -4px 0 8px rgba(0,0,0,0.08);
 }
 
+/* FIXED POSITIONING: 
+   Brought coordinates inward closer to the core (left: 62.5px) 
+   so they construct a tight banana silhouette instead of a wide tulip.
+*/
+.left-peel {
+    left: 58px; /* Tightly hugs the left side of the core */
+    z-index: 14;
+}
+
+.right-peel {
+    left: 67px; /* Tightly hugs the right side of the core */
+    z-index: 13;
+}
+
+.front-peel {
+    left: 62.5px; /* Center-aligned over the face */
+    z-index: 15;
 }
 
 /* Base interaction classes */
