@@ -203,5 +203,14 @@ body {
 }
 
 @media (max-width: 400px) {
-    .game-container { width: 90%; padding: 20px 15px; }
+    .game-container { 
+        width: 90%; 
+        padding: 20px 15px; 
+    }
+    /* FIXED: Scales the entire box together without erasing peel rotations */
+    .banana-box { 
+        transform: scale(0.9); 
+    }
+}
+
 }
