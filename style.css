@@ -50,7 +50,6 @@ body {
     border: 2px solid #ece59a;
 }
 
-/* The dark spot at the bottom of a banana */
 .fruit-tip {
     position: absolute;
     bottom: -5px;
@@ -61,7 +60,6 @@ body {
     border-radius: 50%;
 }
 
-
 /* --- THE PEELS --- */
 .peel {
     position: absolute;
@@ -69,10 +67,9 @@ body {
     height: 170px;
     bottom: 40px;
     transform-origin: bottom center;
-    touch-action: none;
+    touch-action: none; /* Disables mobile screen dragging/scrolling */
 }
 
-/* Crafting the peel curve shape */
 .peel-shape {
     width: 100%;
     height: 100%;
@@ -81,7 +78,6 @@ body {
     box-shadow: inset -5px 0 10px rgba(0,0,0,0.05);
 }
 
-/* Custom tailoring each peel's look and initial position */
 .left-peel {
     left: 45px;
     z-index: 4;
@@ -110,7 +106,6 @@ body {
 .front-peel .peel-shape {
     background: #f5d742;
     border-radius: 50% 50% 30% 30% / 40% 40% 60% 60%;
-    width: 70px;
 }
 
 /* --- INTERACTION CLASSES --- */
@@ -132,6 +127,10 @@ body {
     margin-bottom: 15px;
 }
 
+#reset-btn:hover {
+    background-color: #f1c40f;
+}
+
 #win-message {
     margin-top: 15px;
     font-size: 1.2rem;
@@ -139,6 +138,7 @@ body {
     font-weight: bold;
 }
 
+/* --- LEADERBOARD & SECURE RESET --- */
 .leaderboard {
     margin-top: 25px;
     border-top: 2px dashed #f4d03f;
@@ -147,3 +147,39 @@ body {
 
 .leaderboard h3 { margin: 0 0 10px 0; color: #555; }
 .leaderboard ol { text-align: left; padding-left: 30px; margin: 0; color: #333; }
+
+#clear-scores-btn {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    user-select: none;
+    transition: background 0.2s, transform 0.1s;
+}
+
+#clear-scores-btn.holding {
+    background: #dc3545 !important;
+    color: white !important;
+    border-color: #bd2130;
+    animation: buttonPulse 0.5s infinite alternate;
+}
+
+@keyframes buttonPulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(0.96); }
+}
+
+/* Responsive tweaks for smaller screens */
+@media (max-width: 400px) {
+    .game-container {
+        width: 90%;
+        padding: 15px;
+    }
+    .banana-box {
+        transform: scale(0.9);
+    }
+}
